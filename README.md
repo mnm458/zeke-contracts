@@ -1,4 +1,5 @@
 # zeke-contracts
 
-Install - `yarn`
+Install - `yarn` (not `npm install`)
+
 Compile Contracts `npx hardhat compile`

@@ -168,6 +168,7 @@ contract Ramp is ReentrancyGuard, Ownable {
         } else {
             // https://docs.chain.link/ccip/tutorials/cross-chain-tokens
             // TODO - Call CCIPRouter to perform cross-chain transfer
+            // TO DISCUSS - Need to pay fee to use CCIPRouter, who pays?
         }
     }
 
