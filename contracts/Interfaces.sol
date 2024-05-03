@@ -13,12 +13,6 @@ struct Order {
     uint256 intentId;
 }
 
-struct Deposit {
-    uint256 creationTimestamp;
-    address token;
-    uint256 amount;
-}
-
 struct TokenAndFeed {
     address token; // ERC20 token
     address feed; // Chainlink feed - https://docs.chain.link/data-feeds/price-feeds/addresses?network=base&page=1
@@ -52,24 +46,10 @@ interface IOrderManager {
 }
 
 interface IEscrowManager {
-    function getDepositID(
-        address user,
-        address token
-    ) external view returns (bytes32);
-
-    function createDeposit(
-        address _token,
-        uint256 _amount,
-        address offramper
-    ) external;
-
-    function commitDeposit(bytes32 depositKey, uint256 _amount) external;
-
-    function uncommitDeposit(bytes32 depositKey, uint256 _amount) external;
-
-    function getDeposit(
-        bytes32 _deposit
-    ) external view returns (Deposit memory);
+    function getDeposit(address _offramper, address _token) external view returns (uint256);
+    function deposit(address _offramper, address _token, uint256 _amount) external;
+    function commitDeposit(address _offramper, address _token, uint256 _amount) external;
+    function uncommitDeposit(address _offramper, address _token, uint256 _amount) external;
 }
 
 interface ITokenManager {

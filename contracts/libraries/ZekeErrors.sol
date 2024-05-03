@@ -9,6 +9,8 @@ library ZekeErrors {
     // UserManager.sol
     error UserAlreadyRegistered();
 
+    // EscrowManager.sol
+    error InsufficientDepositAmount();
 
     error TokenNotAccepted();
     error NoCurrentOrderCommitment();

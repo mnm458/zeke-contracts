@@ -6,7 +6,7 @@ import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.s
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
-import { ITokenManager, IEscrowManager, IOrderManager, IUserManager, IVerifier, Order, Deposit, TokenAndFeed } from "./Interfaces.sol";
+import { ITokenManager, IOrderManager, IEscrowManager, IUserManager, IVerifier, Order, TokenAndFeed } from "./Interfaces.sol";
 import { TokenManager } from './managers/TokenManager.sol';
 import { EscrowManager } from './managers/EscrowManager.sol';
 import { OrderManager } from './managers/OrderManager.sol';
@@ -39,35 +39,27 @@ contract Ramp is ReentrancyGuard, Ownable {
      * VIEW FUNCTIONS
      */
 
-    // function getDepositID(
-    //     address user,
-    //     address token
-    // ) external view returns (bytes32) {
-    //     return stakeManager.getDepositID(user, token);
-    // }
 
     /**
      * ONRAMPER FUNCTIONS
      */
 
-    function addOrder(
-        uint256 intentId,
-        uint256 requestedAmount,
-        uint256 minFiatAmount,
-        address tokenAddress
-    ) external nonReentrant {
-        require(tokenManager.isValidToken(tokenAddress), "Not a valid token!");
-        //TODO: Add chainlink pricefeed. MCT:= Ratio between said stablecoin and USD. Chainlink price feed to verify min ratio difference is maintained
-        orderManager.addOrder(
-            intentId,
-            requestedAmount,
-            minFiatAmount,
-            tokenAddress,
-            msg.sender
-        );
-    }
-
-
+    // function addOrder(
+    //     uint256 intentId,
+    //     uint256 requestedAmount,
+    //     uint256 minFiatAmount,
+    //     address tokenAddress
+    // ) external nonReentrant {
+    //     require(tokenManager.isValidToken(tokenAddress), "Not a valid token!");
+    //     //TODO: Add chainlink pricefeed. MCT:= Ratio between said stablecoin and USD. Chainlink price feed to verify min ratio difference is maintained
+    //     orderManager.addOrder(
+    //         intentId,
+    //         requestedAmount,
+    //         minFiatAmount,
+    //         tokenAddress,
+    //         msg.sender
+    //     );
+    // }
 
     /**
      * OFFRAMPER FUNCTIONS

@@ -1,77 +1,65 @@
 // SPDX-License-Identifier: Unlicensed
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
-import "../Interfaces.sol";
-import "hardhat/console.sol";
+import { ZekeErrors } from '../libraries/ZekeErrors.sol';
+import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
+import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import { IEscrowManager } from "../Interfaces.sol";
 
 contract EscrowManager is Ownable, ReentrancyGuard, IEscrowManager {
+    event Deposited(address indexed user, address indexed token, uint256 amount);
+    event Withdrawn(address indexed user, address indexed token, uint256 amount);
 
-
-    event Staked(address indexed user, uint256 amount);
-    event Withdrawn(address indexed user, uint256 amount);
-
-    mapping(bytes32 => Deposit) private deposits;
+    // offramper => token => deposit amount
+    mapping(address => mapping(address => uint256)) private deposits;
 
     constructor(address _owner) Ownable(_owner){}
 
+    /**
+     * VIEW FUNCTIONS
+     */
 
-    function getDepositID(address user, address token) external pure returns (bytes32) {
-        bytes32 key = keccak256(abi.encodePacked(user, token));
-        return key;
+    function getDeposit(address _user, address _token) external view returns (uint256) {
+        return deposits[_user][_token];
     }
 
-    function getDeposit(bytes32 _deposit) external view returns (Deposit memory) {
-        return deposits[_deposit];
+    /**
+     * OFFRAMPER FUNCTIONS
+     */
+
+
+    function deposit(address _offramper, address _token, uint256 _amount) external nonReentrant onlyOwner {
+        if (_token == address(0)) revert ZekeErrors.ZeroAddress();
+        if (_offramper == address(0)) revert ZekeErrors.ZeroAddress();
+        if (_amount == 0) revert ZekeErrors.ZeroUint();
+        deposits[_offramper][_token] += _amount;
+        // TODO - Emit event
     }
 
+    // Remove deposit from escrowed funds
+    function commitDeposit(address _offramper, address _token, uint256 _amount) external onlyOwner nonReentrant {
+        if (_token == address(0)) revert ZekeErrors.ZeroAddress();
+        if (_offramper == address(0)) revert ZekeErrors.ZeroAddress();
+        if (_amount == 0) revert ZekeErrors.ZeroUint();
 
-    /* Better to be handled by the Ramp contract itself */
-    function createDeposit(address _token, uint256 _amount, address offramper) external nonReentrant onlyOwner {
-        bytes32 depositKey = this.getDepositID(offramper, _token);
-        Deposit storage deposit = deposits[depositKey];
-        
-        if (deposit.amount == 0) {
-            // Create a new deposit entry
-            deposits[depositKey] = Deposit({
-                creationTimestamp: block.timestamp,
-                token: _token,
-                amount: _amount
-            });
+        uint256 currentDeposit = deposits[_offramper][_token];
+        if (currentDeposit < _amount) revert ZekeErrors.InsufficientDepositAmount();
 
-        } else {
-            // Update an existing deposit entry
-            require(deposit.token == _token, "Token must match!");
-            deposit.amount += _amount;
-
-        }
+        // TODO: in future, need to keep track of committed orders also
+        deposits[_offramper][_token] = currentDeposit - _amount;
+        // TODO - Emit event
     }
 
-    function commitDeposit(bytes32 depositKey, uint256 _amount) external onlyOwner nonReentrant {
+    // Return deposit to escrowed funds
+    function uncommitDeposit(address _offramper, address _token, uint256 _amount) external onlyOwner nonReentrant {
         // check if there are any orders pending
         // for now, not making this external
         // TODO: in future, need to keep track of committed orders also
+        if (_token == address(0)) revert ZekeErrors.ZeroAddress();
+        if (_offramper == address(0)) revert ZekeErrors.ZeroAddress();
+        if (_amount == 0) revert ZekeErrors.ZeroUint();
 
-        Deposit storage deposit = deposits[depositKey];
-
-        require(deposit.amount >= _amount, "Insufficient deposited amount");
-        require(_amount > 0, "Zero value removal");
-
-        deposit.amount -= _amount;
-        
+        deposits[_offramper][_token] += _amount;
+        // TODO - Emit event
     }
-
-    function uncommitDeposit(bytes32 depositKey, uint256 _amount) external onlyOwner nonReentrant {
-        // check if there are any orders pending
-        // for now, not making this external
-        // TODO: in future, need to keep track of committed orders also
-
-        Deposit storage deposit = deposits[depositKey];
-
-        deposit.amount += _amount;
-        
-    }
-
-
 }
