@@ -2,7 +2,6 @@
 pragma solidity ^0.8.0;
 
 import "./Interfaces.sol";
-import "hardhat/console.sol";
 
 contract PaypalVerifier is IVerifier {
     mapping(uint256 => address) internal verifiers;

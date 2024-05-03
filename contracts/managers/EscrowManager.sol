@@ -6,7 +6,7 @@ import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "../Interfaces.sol";
 import "hardhat/console.sol";
 
-contract StakeManager is Ownable, ReentrancyGuard, IStakeManager {
+contract EscrowManager is Ownable, ReentrancyGuard, IEscrowManager {
 
 
     event Staked(address indexed user, uint256 amount);

@@ -11,9 +11,7 @@ contract OrderManager is Ownable, ReentrancyGuard, IOrderManager {
     
     event OrderCreation(uint256 indexed intentId);
 
-    
     mapping(uint256 => Order) public orders;
-
     mapping(address => uint256) public userId;
     mapping(uint256 => bool) public nullifierGraveyard;
 
@@ -53,7 +51,6 @@ contract OrderManager is Ownable, ReentrancyGuard, IOrderManager {
     {
         return orders[intentId];
     }
-
 
     function commitOrder(uint256 intentId, address offramper) external onlyOwner {
         Order storage order = orders[intentId];

@@ -51,7 +51,7 @@ interface IOrderManager {
     ) external view returns (bool);
 }
 
-interface IStakeManager {
+interface IEscrowManager {
     function getDepositID(
         address user,
         address token

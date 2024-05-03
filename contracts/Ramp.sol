@@ -6,37 +6,38 @@ import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.s
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
-import { ITokenManager, IStakeManager, IOrderManager, IUserManager, IVerifier, Order, Deposit } from "./Interfaces.sol";
+import { ITokenManager, IEscrowManager, IOrderManager, IUserManager, IVerifier, Order, Deposit, TokenAndFeed } from "./Interfaces.sol";
 import { TokenManager } from './managers/TokenManager.sol';
-import { StakeManager } from './managers/StakeManager.sol';
+import { EscrowManager } from './managers/EscrowManager.sol';
 import { OrderManager } from './managers/OrderManager.sol';
 import { UserManager } from './managers/UserManager.sol';
 
-contract Ramp is ReentrancyGuard {
-    // using SafeERC20 for IERC20;
+contract Ramp is ReentrancyGuard, Ownable {
+    using SafeERC20 for IERC20;
 
-    // event Staked(address indexed user, uint256 amount);
-    // event Withdrawn(address indexed user, uint256 amount);
+    ITokenManager public immutable tokenManager;
+    IEscrowManager public immutable escrowManager;
+    IOrderManager public immutable orderManager;
+    IUserManager public immutable userManager;
+    IVerifier public immutable verifier;
 
-    // ITokenManager immutable tokenManager;
-    // IStakeManager immutable stakeManager;
-    // IOrderManager immutable orderManager;
-    // IUserManager immutable userManager;
-    // IVerifier immutable verifier;
+    constructor(
+        address _verifier,
+        address _owner,
+        TokenAndFeed[] memory _tokenAndFeeds
+    ) Ownable(_owner) {
+        // Deploy Manager contracts, and make this contract the owner for all Manager contracts
+        tokenManager = new TokenManager(address(this));
+        escrowManager = new EscrowManager(address(this));
+        orderManager = new OrderManager(address(this));
+        userManager = new UserManager(address(this));
+        verifier = IVerifier(_verifier);
+        tokenManager.addValidTokens(_tokenAndFeeds);
+    }
 
-    // constructor(
-    //     address _tokenManager,
-    //     address _stakeManager,
-    //     address _orderManager,
-    //     address _userManager,
-    //     address _verifier
-    // ) {
-    //     tokenManager = ITokenManager(_tokenManager);
-    //     stakeManager = IStakeManager(_stakeManager);
-    //     orderManager = IOrderManager(_orderManager);
-    //     userManager = IUserManager(_userManager);
-    //     verifier = IVerifier(_verifier);
-    // }
+    /**
+     * VIEW FUNCTIONS
+     */
 
     // function getDepositID(
     //     address user,
@@ -45,35 +46,38 @@ contract Ramp is ReentrancyGuard {
     //     return stakeManager.getDepositID(user, token);
     // }
 
-    // // function addValidTokens(address[] memory tokens) external {
-    // //     tokenManager.addValidTokens(tokens);
-    // // }
+    /**
+     * ONRAMPER FUNCTIONS
+     */
 
-    // function removeValidTokens(address[] memory tokens) external {
-    //     tokenManager.removeValidTokens(tokens);
-    // }
+    function addOrder(
+        uint256 intentId,
+        uint256 requestedAmount,
+        uint256 minFiatAmount,
+        address tokenAddress
+    ) external nonReentrant {
+        require(tokenManager.isValidToken(tokenAddress), "Not a valid token!");
+        //TODO: Add chainlink pricefeed. MCT:= Ratio between said stablecoin and USD. Chainlink price feed to verify min ratio difference is maintained
+        orderManager.addOrder(
+            intentId,
+            requestedAmount,
+            minFiatAmount,
+            tokenAddress,
+            msg.sender
+        );
+    }
 
-    // function registerUser(uint256 _userId, string calldata email) external {
-    //     // add the proof verification part here
-    //     userManager.registerUser(msg.sender, _userId, email);
-    // }
 
-    // function addOrder(
-    //     uint256 intentId,
-    //     uint256 requestedAmount,
-    //     uint256 minFiatAmount,
-    //     address tokenAddress
-    // ) external nonReentrant {
-    //     require(tokenManager.isValidToken(tokenAddress), "Not a valid token!");
-    //     //TODO: Add chainlink pricefeed. MCT:= Ratio between said stablecoin and USD. Chainlink price feed to verify min ratio difference is maintained
-    //     orderManager.addOrder(
-    //         intentId,
-    //         requestedAmount,
-    //         minFiatAmount,
-    //         tokenAddress,
-    //         msg.sender
-    //     );
-    // }
+
+    /**
+     * OFFRAMPER FUNCTIONS
+     */
+
+    function registerUser(uint256 _userId, string calldata email) external {
+        // add the proof verification part here
+        userManager.registerUser(msg.sender, _userId, email);
+    }
+
 
     // function getOrder(uint256 intentId) external view returns (Order memory) {
     //     return orderManager.getOrder(intentId);
@@ -179,4 +183,16 @@ contract Ramp is ReentrancyGuard {
     //     deposit.amount -= _amount;
     //     token.safeTransfer(msg.sender, _amount);
     // }
+
+    /**
+     * ADMIN ONLY FUNCTIONS
+     */
+
+    function addValidTokens(TokenAndFeed[] memory _tokenAndFeeds) external onlyOwner {
+        tokenManager.addValidTokens(_tokenAndFeeds);
+    }
+
+    function removeValidTokens(address[] memory tokens) external onlyOwner {
+        tokenManager.removeValidTokens(tokens);
+    }
 }
