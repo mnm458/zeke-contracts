@@ -36,6 +36,14 @@ contract EscrowManager is Ownable, ReentrancyGuard, IEscrowManager {
         // TODO - Emit event
     }
 
+    function withdraw(address _offramper, address _token, uint256 _amount) external nonReentrant onlyOwner {
+        if (_token == address(0)) revert ZekeErrors.ZeroAddress();
+        if (_offramper == address(0)) revert ZekeErrors.ZeroAddress();
+        if (_amount == 0) revert ZekeErrors.ZeroUint();
+        deposits[_offramper][_token] -= _amount;
+        // TODO - Emit event
+    }
+
     // Remove deposit from escrowed funds
     function commitDeposit(address _offramper, address _token, uint256 _amount) external onlyOwner nonReentrant {
         if (_token == address(0)) revert ZekeErrors.ZeroAddress();

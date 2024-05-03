@@ -7,7 +7,7 @@ struct Order {
     // Slot - 20 + 4 + 8
     address token; // 'token == address(0)' means order does not exist, we take care to ensure valid order cannot have token == address(0)
     uint32 commitmentExpiryTime;
-    uint64 dstchainId;
+    uint64 dstChainId;
     // Slot - 20 + 1
     address onramper;
     OrderStatus orderStatus;
@@ -33,7 +33,7 @@ interface IOrderManager {
         address _token, 
         uint256 _amount,
         int256 _minFiatRate,
-        uint64 _dstchainId
+        uint64 _dstChainId
     ) external returns (bytes32);
 
     function commitOrder(address _offramper, bytes32 _orderId) external;
@@ -54,6 +54,7 @@ interface IOrderManager {
 interface IEscrowManager {
     function getDeposit(address _offramper, address _token) external view returns (uint256);
     function deposit(address _offramper, address _token, uint256 _amount) external;
+    function withdraw(address _offramper, address _token, uint256 _amount) external;
     function commitDeposit(address _offramper, address _token, uint256 _amount) external;
     function uncommitDeposit(address _offramper, address _token, uint256 _amount) external;
 }
