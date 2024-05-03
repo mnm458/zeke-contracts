@@ -1,41 +1,97 @@
 // SPDX-License-Identifier: Unlicensed
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "../Interfaces.sol";
+import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
+import { ITokenManager, TokenAndFeed } from "../Interfaces.sol";
+import { ZekeErrors } from '../libraries/ZekeErrors.sol';
+import { AggregatorV3Interface } from '@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol';
+import { SafeCast } from '@openzeppelin/contracts/utils/math/SafeCast.sol';
 
 contract TokenManager is Ownable, ITokenManager {
-    using SafeERC20 for IERC20;
-    
-    mapping(address => uint256) public validTokens;
+    // MAX 1% difference between Chainlink feed rate and minFiatRate
+    // Start as 'constant', can set as immutable or dynamic value later
+    int256 public constant MAX_FEED_RATE_DIFF = 1e16; 
+    mapping(address => address) public tokenFeed;
 
-    constructor(address _owner, address[] memory stakingTokens) Ownable(_owner) {
-        _addValidTokens(stakingTokens);
+    constructor(address _owner) Ownable(_owner) {}
+
+    /**
+     * VIEW FUNCTIONS
+     */
+
+    function isValidToken(address _token) external view returns (bool) {
+        return tokenFeed[_token] != address(0);
     }
 
-    function isValidToken(address _token) external view returns(bool){
-        return validTokens[_token] == 1;
+    function isMinFiatRateValid(int256 _minFiatRate, address _token) external view returns (bool) {
+        // https://docs.chain.link/data-feeds/using-data-feeds
+        address _feed = tokenFeed[_token];
+        (
+            /* uint80 roundID */,
+            int chainlinkFeedRate,
+            /*uint startedAt*/,
+            /*uint timeStamp*/,
+            /*uint80 answeredInRound*/
+        ) = AggregatorV3Interface(_feed).latestRoundData();
+
+        int256 _maxToleratedFiatRate = chainlinkFeedRate * (1e18 + MAX_FEED_RATE_DIFF) / 1e18;
+        int256 _minToleratedFiatRate = chainlinkFeedRate * (1e18 - MAX_FEED_RATE_DIFF) / 1e18;
+        
+        if (_minFiatRate < _minToleratedFiatRate || _minFiatRate > _maxToleratedFiatRate) {
+            return false;
+        }
+
+        return true;
     }
 
+    function isActualAmountSufficient(uint256 _actualAmount, int256 _minFiatRate, address _token, uint256 _tokenAmount) external view returns (bool) {
+        uint8 decimals = AggregatorV3Interface(tokenFeed[_token]).decimals();
+        
+        // Will revert if _minFiatRate is a negative value
+        uint256 _minFiatRateCasted = SafeCast.toUint256(_minFiatRate);
 
-    function addValidTokens(address[] memory tokens) external onlyOwner {
-        _addValidTokens(tokens);
+        // Convert tokenAmount to actual amount
+        // TODO - Check this maths works
+        uint256 _tokenAmountConverted = _tokenAmount * _minFiatRateCasted / uint256(decimals);
+
+        if (_actualAmount < _tokenAmountConverted) return false;
+        return true;
     }
 
-    function _addValidTokens(address[] memory tokens) internal {
-        uint256 tokenLength = tokens.length;
+    function getFeed(address _token) external view returns (address) {
+        return tokenFeed[_token];
+    }
+
+    /**
+     * STATE MUTATING FUNCTIONS
+     */
+
+    function addValidTokens(TokenAndFeed[] memory _tokenAndFeeds) external onlyOwner {
+        _addValidTokens(_tokenAndFeeds);
+    }
+
+    function removeValidTokens(address[] memory _tokens) external onlyOwner {
+        uint256 tokenLength = _tokens.length;
         for (uint256 index = 0; index < tokenLength; index++) {
-            validTokens[tokens[index]] = 1;
+            address token = _tokens[index];
+            tokenFeed[token] = address(0);
+            // TODO - Emit event
         }
     }
 
-    function removeValidTokens(address[] memory tokens) external onlyOwner {
-        uint256 tokenLength = tokens.length;
+    /**
+     * INTERNAL HELPERS - STATE MUTATING FUNCTIONS
+     */
+
+    function _addValidTokens(TokenAndFeed[] memory _tokenAndFeeds) internal {
+        uint256 tokenLength = _tokenAndFeeds.length;
         for (uint256 index = 0; index < tokenLength; index++) {
-            validTokens[tokens[index]] = 0;
+            address token = _tokenAndFeeds[index].token;
+            address feed = _tokenAndFeeds[index].feed;
+            if(token == address(0)) revert ZekeErrors.ZeroAddress();
+            if(feed == address(0)) revert ZekeErrors.ZeroAddress();
+            tokenFeed[token] = feed;
+            // TODO - Emit event
         }
     }
-
 }

@@ -1,177 +1,209 @@
 // SPDX-License-Identifier: Unlicensed
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
-import "./Interfaces.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
+import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
-contract Ramp is ReentrancyGuard {
+import { ZekeErrors } from './libraries/ZekeErrors.sol';
+
+import { ITokenManager, IEscrowManager, IOrderManager, IUserManager, IVerifier, Order, TokenAndFeed, OrderStatus } from "./Interfaces.sol";
+import { TokenManager } from './managers/TokenManager.sol';
+import { EscrowManager } from './managers/EscrowManager.sol';
+import { OrderManager } from './managers/OrderManager.sol';
+import { UserManager } from './managers/UserManager.sol';
+
+contract Ramp is ReentrancyGuard, Ownable {
     using SafeERC20 for IERC20;
 
-    event Staked(address indexed user, uint256 amount);
-    event Withdrawn(address indexed user, uint256 amount);
-
-    ITokenManager immutable tokenManager;
-    IStakeManager immutable stakeManager;
-    IOrderManager immutable orderManager;
-    IUserManager immutable userManager;
-    IVerifier immutable verifier;
+    ITokenManager public immutable tokenManager;
+    IEscrowManager public immutable escrowManager;
+    IOrderManager public immutable orderManager;
+    IUserManager public immutable userManager;
+    IVerifier public immutable verifier;
 
     constructor(
-        address _tokenManager,
-        address _stakeManager,
-        address _orderManager,
-        address _userManager,
-        address _verifier
-    ) {
-        tokenManager = ITokenManager(_tokenManager);
-        stakeManager = IStakeManager(_stakeManager);
-        orderManager = IOrderManager(_orderManager);
-        userManager = IUserManager(_userManager);
+        address _verifier,
+        address _owner,
+        TokenAndFeed[] memory _tokenAndFeeds
+    ) Ownable(_owner) {
+        // Deploy Manager contracts, and make this contract the owner for all Manager contracts
+        tokenManager = new TokenManager(address(this));
+        escrowManager = new EscrowManager(address(this));
+        orderManager = new OrderManager(address(this));
+        userManager = new UserManager(address(this));
         verifier = IVerifier(_verifier);
+        tokenManager.addValidTokens(_tokenAndFeeds);
     }
 
-    function getDepositID(
-        address user,
-        address token
-    ) external view returns (bytes32) {
-        return stakeManager.getDepositID(user, token);
+    /**
+     * VIEW FUNCTIONS
+     */
+
+    function getOrder(bytes32 _orderId) external view returns (Order memory) {
+        return orderManager.getOrder(_orderId);
     }
 
-    function addValidTokens(address[] memory tokens) external {
-        tokenManager.addValidTokens(tokens);
+
+    /**
+     * ONRAMPER FUNCTIONS
+     */
+
+    function addOrder(
+        address _onramper, 
+        address _token, 
+        uint256 _amount,
+        int256 _minFiatRate,
+        uint64 _dstChainId
+    ) external nonReentrant {
+        //** INPUT VALIDATION **//
+        if (_onramper == address(0)) revert ZekeErrors.ZeroAddress();
+        if (_token == address(0)) revert ZekeErrors.ZeroAddress();
+        if (_amount == 0) revert ZekeErrors.ZeroUint();
+        if (_minFiatRate == 0) revert ZekeErrors.ZeroUint();
+        if (_dstChainId == 0) revert ZekeErrors.ZeroUint();
+
+        if (!tokenManager.isValidToken(_token)) revert ZekeErrors.TokenNotAccepted();
+        if (!tokenManager.isMinFiatRateValid(_minFiatRate, _token)) revert ZekeErrors.MinFiatRateInvalid();
+
+        orderManager.addOrder(
+            _onramper,
+            _token,
+            _amount,
+            _minFiatRate,
+            _dstChainId
+        );
     }
 
-    function removeValidTokens(address[] memory tokens) external {
-        tokenManager.removeValidTokens(tokens);
-    }
+    /**
+     * OFFRAMPER FUNCTIONS
+     */
 
     function registerUser(uint256 _userId, string calldata email) external {
         // add the proof verification part here
         userManager.registerUser(msg.sender, _userId, email);
     }
 
-    function addOrder(
-        uint256 intentId,
-        uint256 requestedAmount,
-        uint256 minFiatAmount,
-        address tokenAddress
-    ) external nonReentrant {
-        require(tokenManager.isValidToken(tokenAddress), "Not a valid token!");
-        //TODO: Add chainlink pricefeed. MCT:= Ratio between said stablecoin and USD. Chainlink price feed to verify min ratio difference is maintained
-        orderManager.addOrder(
-            intentId,
-            requestedAmount,
-            minFiatAmount,
-            tokenAddress,
-            msg.sender
-        );
+    function commitOrder(bytes32 _orderId, int256 _minFiatRate) external {
+        if (_minFiatRate == 0) revert ZekeErrors.ZeroUint();
+        if (!orderManager.doesOrderExist(_orderId)) revert ZekeErrors.OrderNotFound();
+        Order memory order = orderManager.getOrder(_orderId);
+
+        if (order.orderStatus == OrderStatus.CLOSED) revert ZekeErrors.OrderClosed();
+        if (order.orderStatus == OrderStatus.COMMITTED && order.commitmentExpiryTime > block.timestamp) revert ZekeErrors.CurrentCommitment();
+
+        if (!tokenManager.isMinFiatRateValid(_minFiatRate, order.token)) revert ZekeErrors.MinFiatRateInvalid();
+        if (_minFiatRate < order.minFiatRate) revert ZekeErrors.MinFiatRateNotAccepted();
+
+        if (escrowManager.getDeposit(msg.sender, order.token) < order.amount) revert ZekeErrors.InsufficientEscrowedFunds();
+        if (userManager.doesUserExist(msg.sender)) revert ZekeErrors.UserNotRegistered();
+
+        orderManager.commitOrder(msg.sender, _orderId);
+        escrowManager.commitDeposit(msg.sender, order.token, order.amount);
     }
 
-    function getOrder(uint256 intentId) external view returns (Order memory) {
-        return orderManager.getOrder(intentId);
-    }
+    function uncommitOrder(bytes32 _orderId) external {
+        if (!orderManager.doesOrderExist(_orderId)) revert ZekeErrors.OrderNotFound();
+        Order memory order = orderManager.getOrder(_orderId);
+        if (order.orderStatus == OrderStatus.CLOSED) revert ZekeErrors.OrderClosed();
+        if (order.orderStatus == OrderStatus.OPEN) revert ZekeErrors.OrderOpen();
+        if (order.offramper != msg.sender) revert ZekeErrors.NotCurrentCommittedOfframper();
 
-    function commitOrder(uint256 intentId) external {
-        Order memory order = orderManager.getOrder(intentId);
-        bytes32 depositKey = stakeManager.getDepositID(msg.sender, order.token);
-        Deposit memory deposit = stakeManager.getDeposit(depositKey);
-
-        require(order.token == deposit.token, "Not matching tokens");
-        require(order.requestedAmount <= deposit.amount, "Not enough stake!");
-        require(userManager.doesUserExist(msg.sender), "Not registered user!");
-
-        orderManager.commitOrder(intentId, msg.sender);
-        stakeManager.commitDeposit(depositKey, order.requestedAmount);
-    }
-
-    function uncommitOrder(uint256 intentId) external {
-        Order memory order = orderManager.getOrder(intentId);
-        require(order.offramper == msg.sender, "not offramper!");
-
-        bytes32 depositKey = stakeManager.getDepositID(msg.sender, order.token);
-
-        stakeManager.uncommitDeposit(depositKey, order.requestedAmount);
-        orderManager.uncommitOrder(intentId);
+        orderManager.uncommitOrder(_orderId);
+        escrowManager.uncommitDeposit(msg.sender, order.token, order.amount);
     }
 
     function completeOrder(
-        uint256 intentId,
-        bytes calldata proof
+        bytes32 _orderId,
+        bytes calldata _proof
     ) external nonReentrant {
-        Order memory order = orderManager.getOrder(intentId);
+        Order memory order = orderManager.getOrder(_orderId);
 
-        (bool isValid, bytes memory _pubSignalsBytes) = verifier.verify(proof);
+        if (!orderManager.doesOrderExist(_orderId)) revert ZekeErrors.OrderNotFound();
+        if (order.orderStatus != OrderStatus.COMMITTED) revert ZekeErrors.NoCurrentOrderCommitment();
+        if (order.commitmentExpiryTime < block.timestamp) revert ZekeErrors.OrderCommitmentExpired();
+    
+        (bool isValid, bytes memory _pubSignalsBytes) = verifier.verify(_proof);
+        if (!isValid) revert ZekeErrors.OrderProofInvalid();
 
         uint[10] memory _pubSignals = abi.decode(_pubSignalsBytes, (uint[10]));
 
-        // TODO: add more checks here
+        /**
+         * Validate _pubSignals
+         * TODO: add more checks here
+         * 
+         * [0] modulus_hash;
+         * [1] email_hash_poseidon
+         * [2] post_compute_hash
+         * [3] from_regex_reveal_poseidon
+         * [4] actual_amount
+         * [5] actual_timestamp
+         * [6] packed_offramper_id_hashed
+         * [7] packed_onramper_id_hashed
+         * [8] email_nullifier
+         * [9] intent_hash (public input)
+        */
 
-        require(isValid, "Not valid proof!");
-        require(
-            order.creationTimestamp != 0,
-            "Order does not exist for the given intentId"
-        );
-        require(_pubSignals[4] > order.minFiatAmount, "Not enough payment!");
-        require(
-            orderManager.checkNullifier(_pubSignals[8]),
-            "Nullifier before!"
-        );
-        require(
-            orderManager.checkId(
-                _pubSignals[9],
-                _pubSignals[4],
-                _pubSignals[5]
-            ),
-            "Not correct order!"
-        );
-        require(
-            userManager.compareUserId(order.offramper, _pubSignals[6]),
-            "not correct offramper!"
-        );
+       if (userManager.compareUserId(order.offramper, _pubSignals[6])) revert ZekeErrors.IncorrectOfframper();
+       if (userManager.compareUserId(order.onramper, _pubSignals[7])) revert ZekeErrors.IncorrectOfframper();
+       if (orderManager.isNullifierConsumed(_pubSignals[8])) revert ZekeErrors.NullifierConsumed();
+       // TODO - Check if uint256 cast here works, or should we have just casted the keccak256 hash to uint256 straight away
+       if (_pubSignals[9] != uint256(_orderId)) revert ZekeErrors.IncorrectOrder();
+       if (!tokenManager.isActualAmountSufficient(_pubSignals[4], order.minFiatRate, order.token, order.amount)) revert ZekeErrors.ActualAmountInsufficient();
 
-        require(
-            userManager.compareUserId(order.onramper, _pubSignals[7]),
-            "not correct onramper!"
-        );
+    //     require(
+    //         orderManager.checkId(
+    //             _pubSignals[9],
+    //             _pubSignals[4],
+    //             _pubSignals[5]
+    //         ),
+    //         "Not correct order!"
+    //     );
 
-        orderManager.completeOrder(intentId, _pubSignals[8]);
+        orderManager.completeOrder(_orderId, _pubSignals[8]);
 
-        IERC20 token = IERC20(order.token);
-        token.safeTransfer(order.onramper, order.requestedAmount);
+        if (order.dstChainId == block.chainid) {
+            IERC20(order.token).safeTransfer(order.onramper, order.amount);
+        } else {
+            // https://docs.chain.link/ccip/tutorials/cross-chain-tokens
+            // TODO - Call CCIPRouter to perform cross-chain transfer
+        }
     }
 
-    function createDeposit(
+    function deposit(
         address _token,
         uint256 _amount
     ) external nonReentrant {
-        IERC20 token = IERC20(_token);
-        uint256 allowance = token.allowance(msg.sender, address(this));
+        if (_token == address(0)) revert ZekeErrors.ZeroAddress();
+        if (_amount == 0) revert ZekeErrors.ZeroUint();
+        if (!tokenManager.isValidToken(_token)) revert ZekeErrors.TokenNotAccepted();
 
-        require(allowance >= _amount, "Insufficient allowance");
-        require(_amount > 0, "Zero value deposit");
-        require(tokenManager.isValidToken(_token), "Not a valid token!");
-
-        stakeManager.createDeposit(_token, _amount, msg.sender);
-        token.safeTransferFrom(msg.sender, address(this), _amount);
+        escrowManager.deposit(msg.sender, _token, _amount);
+        IERC20(_token).safeTransferFrom(msg.sender, address(this), _amount);
     }
 
-    /* TODO: Will work on this later */
-    // function _removeDeposit(address _token, uint256 _amount) internal nonReentrant {
-    //     // check if there are any orders pending
-    //     // for now, not making this external
-    //     // TODO: in future, need to keep track of committed orders also
+    function withdraw(
+        address _token,
+        uint256 _amount
+    ) external nonReentrant {
+        if (_token == address(0)) revert ZekeErrors.ZeroAddress();
+        if (_amount == 0) revert ZekeErrors.ZeroUint();
+        if (!tokenManager.isValidToken(_token)) revert ZekeErrors.TokenNotAccepted();
+        if (escrowManager.getDeposit(msg.sender, _token) < _amount) revert ZekeErrors.InsufficientEscrowedFunds();
+        escrowManager.withdraw(msg.sender, _token, _amount);
+        IERC20(_token).safeTransfer(msg.sender, _amount);
+    }
 
-    //     bytes32 depositKey = stakeManager.getDepositID(msg.sender, _token);
-    //     Deposit storage deposit = stakeManager.getDeposit(depositKey);
+    /**
+     * ADMIN ONLY FUNCTIONS
+     */
 
-    //     require(deposit.amount >= _amount, "Insufficient deposited amount");
-    //     require(_amount > 0, "Zero value removal");
+    function addValidTokens(TokenAndFeed[] memory _tokenAndFeeds) external onlyOwner {
+        tokenManager.addValidTokens(_tokenAndFeeds);
+    }
 
-    //     IERC20 token = IERC20(_token);
-    //     deposit.amount -= _amount;
-    //     token.safeTransfer(msg.sender, _amount);
-    // }
+    function removeValidTokens(address[] memory tokens) external onlyOwner {
+        tokenManager.removeValidTokens(tokens);
+    }
 }

@@ -1,76 +1,74 @@
 // SPDX-License-Identifier: Unlicensed
 pragma solidity ^0.8.0;
 
+enum OrderStatus { OPEN, COMMITTED, CLOSED }
+
 struct Order {
-    uint120 creationTimestamp;
-    uint120 offramperDeadline;
-    uint16 status;
+    // Slot - 20 + 4 + 8
+    address token; // 'token == address(0)' means order does not exist, we take care to ensure valid order cannot have token == address(0)
+    uint32 commitmentExpiryTime;
+    uint64 dstChainId;
+    // Slot - 20 + 1
     address onramper;
+    OrderStatus orderStatus;
+    // 1 slot each
     address offramper;
-    address token;
-    uint256 requestedAmount;
-    uint256 minFiatAmount;
-    uint256 intentId;
+    uint256 amount;
+    int256 minFiatRate;
 }
 
-struct Deposit {
-    uint256 creationTimestamp;
-    address token;
-    uint256 amount;
+struct TokenAndFeed {
+    address token; // ERC20 token
+    address feed; // Chainlink feed - https://docs.chain.link/data-feeds/price-feeds/addresses?network=base&page=1
 }
 
 /* -------------------- Managers -------------------- */
 interface IOrderManager {
+    function getOrder(bytes32 orderId) external view returns (Order memory);
+
+    function doesOrderExist(bytes32 orderId) external view returns (bool);
+
     function addOrder(
-        uint256 intentId,
-        uint256 requestedAmount,
-        uint256 minFiatAmount,
-        address tokenAddress,
-        address onramper
-    ) external;
+        address _onramper, 
+        address _token, 
+        uint256 _amount,
+        int256 _minFiatRate,
+        uint64 _dstchainId
+    ) external returns (bytes32);
 
-    function getOrder(uint256 intentId) external view returns (Order memory);
+    function commitOrder(address _offramper, bytes32 _orderId) external;
 
-    function commitOrder(uint256 intentId, address offramper) external;
+    function uncommitOrder(bytes32 _orderId) external;
 
-    function uncommitOrder(uint256 intentId) external;
+    function completeOrder(bytes32 _orderId, uint256 nullifier) external;
 
-    function completeOrder(uint256 intentId, uint256 nullifier) external;
-
-    function checkNullifier(uint256 nullifier) external view returns (bool);
+    function isNullifierConsumed(uint256 nullifier) external view returns (bool);
 
     function checkId(
-        uint256 intentId,
-        uint256 amount,
-        uint256 timestamp
+        bytes32 _orderId,
+        uint256 _amount,
+        uint256 _timestamp
     ) external view returns (bool);
 }
 
-interface IStakeManager {
-    function getDepositID(
-        address user,
-        address token
-    ) external view returns (bytes32);
-
-    function createDeposit(
-        address _token,
-        uint256 _amount,
-        address offramper
-    ) external;
-
-    function commitDeposit(bytes32 depositKey, uint256 _amount) external;
-
-    function uncommitDeposit(bytes32 depositKey, uint256 _amount) external;
-
-    function getDeposit(
-        bytes32 _deposit
-    ) external view returns (Deposit memory);
+interface IEscrowManager {
+    function getDeposit(address _offramper, address _token) external view returns (uint256);
+    function deposit(address _offramper, address _token, uint256 _amount) external;
+    function withdraw(address _offramper, address _token, uint256 _amount) external;
+    function commitDeposit(address _offramper, address _token, uint256 _amount) external;
+    function uncommitDeposit(address _offramper, address _token, uint256 _amount) external;
 }
 
 interface ITokenManager {
-    function addValidTokens(address[] memory tokens) external;
+    function tokenFeed(address _token) external view returns (address);
 
-    function removeValidTokens(address[] memory tokens) external;
+    function isMinFiatRateValid(int256 _minFiatRate, address _token) external view returns (bool);
+
+    function isActualAmountSufficient(uint256 _actualAmount, int256 _minFiatRate, address _token, uint256 _tokenAmount) external view returns (bool);
+
+    function addValidTokens(TokenAndFeed[] memory _tokenAndFeeds) external;
+
+    function removeValidTokens(address[] memory _tokens) external;
 
     function isValidToken(address _token) external view returns (bool);
 }
