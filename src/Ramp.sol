@@ -8,13 +8,13 @@ import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.s
 
 import { ZekeErrors } from './libraries/ZekeErrors.sol';
 
-import { ITokenManager, IEscrowManager, IOrderManager, IUserManager, IVerifier, Order, TokenAndFeed, OrderStatus } from "./Interfaces.sol";
+import { ITokenManager, IEscrowManager, IOrderManager, IUserManager, IVerifier, IRamp, Order, TokenAndFeed, OrderStatus } from "./Interfaces.sol";
 import { TokenManager } from './managers/TokenManager.sol';
 import { EscrowManager } from './managers/EscrowManager.sol';
 import { OrderManager } from './managers/OrderManager.sol';
 import { UserManager } from './managers/UserManager.sol';
 
-contract Ramp is ReentrancyGuard, Ownable {
+contract Ramp is ReentrancyGuard, Ownable, IRamp {
     using SafeERC20 for IERC20;
 
     ITokenManager public immutable tokenManager;

@@ -81,6 +81,65 @@ interface IUserManager {
     function compareUserId(address _userAddress, uint256 id) external view returns(bool);
 }
 
+interface IRamp {
+    function tokenManager() external view returns (ITokenManager);
+    function escrowManager() external view returns (IEscrowManager);
+    function orderManager() external view returns (IOrderManager);
+    function userManager() external view returns (IUserManager);
+    function verifier() external view returns (IVerifier);
+
+    /**
+     * VIEW FUNCTIONS
+     */
+
+    function getOrder(bytes32 _orderId) external view returns (Order memory);
+
+    /**
+     * ONRAMPER FUNCTIONS
+     */
+
+    function addOrder(
+        address _onramper, 
+        address _token, 
+        uint256 _amount,
+        int256 _minFiatRate,
+        uint64 _dstChainId
+    ) external returns (bytes32);
+
+    /**
+     * OFFRAMPER FUNCTIONS
+     */
+
+    function registerUser(uint256 _userId, string calldata email) external;
+
+    function commitOrder(bytes32 _orderId, int256 _minFiatRate) external;
+
+    function uncommitOrder(bytes32 _orderId) external;
+
+    function completeOrder(
+        bytes32 _orderId,
+        bytes calldata _proof
+    ) external;
+
+    function deposit(
+        address _token,
+        uint256 _amount
+    ) external;
+
+    function withdraw(
+        address _token,
+        uint256 _amount
+    ) external;
+
+    /**
+     * ADMIN ONLY FUNCTIONS
+     */
+
+    function addValidTokens(TokenAndFeed[] memory _tokenAndFeeds) external;
+
+    function removeValidTokens(address[] memory tokens) external;
+}
+
 /* -------------------- Verifiers -------------------- */
 interface IMDV {
     function verifyProof(
