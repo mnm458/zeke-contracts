@@ -1,13 +1,15 @@
 // SPDX-License-Identifier: Unlicensed
 pragma solidity ^0.8.0;
 
-import "../Interfaces.sol";
-
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { ITokenManager, TokenAndFeed } from "../Interfaces.sol";
 import { ZekeErrors } from '../libraries/ZekeErrors.sol';
+import { AggregatorV3Interface } from '@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol';
 
 contract TokenManager is Ownable, ITokenManager {
+    // MAX 1% difference between Chainlink feed rate and minFiatRate
+    // Start as 'constant', can set as immutable or dynamic value later
+    int256 public constant MAX_FEED_RATE_DIFF = 1e16; 
     mapping(address => address) public tokenFeed;
 
     constructor(address _owner) Ownable(_owner) {}
@@ -18,6 +20,27 @@ contract TokenManager is Ownable, ITokenManager {
 
     function isValidToken(address _token) external view returns (bool) {
         return tokenFeed[_token] != address(0);
+    }
+
+    function isMinFiatRateValid(int256 _minFiatRate, address _token) internal view returns (bool) {
+        // https://docs.chain.link/data-feeds/using-data-feeds
+        address _feed = tokenFeed[_token];
+        (
+            /* uint80 roundID */,
+            int chainlinkFeedRate,
+            /*uint startedAt*/,
+            /*uint timeStamp*/,
+            /*uint80 answeredInRound*/
+        ) = AggregatorV3Interface(_feed).latestRoundData();
+
+        int256 _maxToleratedFiatRate = chainlinkFeedRate * (1e18 + MAX_FEED_RATE_DIFF) / 1e18;
+        int256 _minToleratedFiatRate = chainlinkFeedRate * (1e18 - MAX_FEED_RATE_DIFF) / 1e18;
+        
+        if (_minFiatRate < _minToleratedFiatRate || _minFiatRate > _maxToleratedFiatRate) {
+            return false;
+        }
+
+        return true;
     }
 
     /**
