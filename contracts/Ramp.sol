@@ -166,6 +166,7 @@ contract Ramp is ReentrancyGuard, Ownable {
         if (order.dstChainId == block.chainid) {
             IERC20(order.token).safeTransfer(order.onramper, order.amount);
         } else {
+            // https://docs.chain.link/ccip/tutorials/cross-chain-tokens
             // TODO - Call CCIPRouter to perform cross-chain transfer
         }
     }
