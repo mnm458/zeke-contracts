@@ -30,8 +30,8 @@ contract OrderManager is Ownable, ReentrancyGuard, IOrderManager {
         return orders[orderId].token != address(0);
     }
 
-    function checkNullifier(uint256 nullifier) external view returns (bool) {
-        return !nullifierGraveyard[nullifier];
+    function isNullifierConsumed(uint256 nullifier) external view returns (bool) {
+        return nullifierGraveyard[nullifier];
     }
     
     function checkId(bytes32 _orderId, uint256 _amount, uint256 _timestamp) external view returns(bool) {

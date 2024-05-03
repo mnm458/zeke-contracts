@@ -5,6 +5,7 @@ import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { ITokenManager, TokenAndFeed } from "../Interfaces.sol";
 import { ZekeErrors } from '../libraries/ZekeErrors.sol';
 import { AggregatorV3Interface } from '@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol';
+import { SafeCast } from '@openzeppelin/contracts/utils/math/SafeCast.sol';
 
 contract TokenManager is Ownable, ITokenManager {
     // MAX 1% difference between Chainlink feed rate and minFiatRate
@@ -41,6 +42,24 @@ contract TokenManager is Ownable, ITokenManager {
         }
 
         return true;
+    }
+
+    function isActualAmountSufficient(uint256 _actualAmount, int256 _minFiatRate, address _token, uint256 _tokenAmount) external view returns (bool) {
+        uint8 decimals = AggregatorV3Interface(tokenFeed[_token]).decimals();
+        
+        // Will revert if _minFiatRate is a negative value
+        uint256 _minFiatRateCasted = SafeCast.toUint256(_minFiatRate);
+
+        // Convert tokenAmount to actual amount
+        // TODO - Check this maths works
+        uint256 _tokenAmountConverted = _tokenAmount * _minFiatRateCasted / uint256(decimals);
+
+        if (_actualAmount < _tokenAmountConverted) return false;
+        return true;
+    }
+
+    function getFeed(address _token) external view returns (address) {
+        return tokenFeed[_token];
     }
 
     /**

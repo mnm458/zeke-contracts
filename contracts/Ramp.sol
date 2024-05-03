@@ -129,14 +129,29 @@ contract Ramp is ReentrancyGuard, Ownable {
 
         uint[10] memory _pubSignals = abi.decode(_pubSignalsBytes, (uint[10]));
 
-    //     // ** Validate _pubSignals ** //
-    //     // TODO: add more checks here
+        /**
+         * Validate _pubSignals
+         * TODO: add more checks here
+         * 
+         * [0] modulus_hash;
+         * [1] email_hash_poseidon
+         * [2] post_compute_hash
+         * [3] from_regex_reveal_poseidon
+         * [4] actual_amount
+         * [5] actual_timestamp
+         * [6] packed_offramper_id_hashed
+         * [7] packed_onramper_id_hashed
+         * [8] email_nullifier
+         * [9] intent_hash (public input)
+        */
 
-    //     require(_pubSignals[4] > order.minFiatRate, "Not enough payment!");
-    //     require(
-    //         orderManager.checkNullifier(_pubSignals[8]),
-    //         "Nullifier before!"
-    //     );
+       if (userManager.compareUserId(order.offramper, _pubSignals[6])) revert ZekeErrors.IncorrectOfframper();
+       if (userManager.compareUserId(order.onramper, _pubSignals[7])) revert ZekeErrors.IncorrectOfframper();
+       if (orderManager.isNullifierConsumed(_pubSignals[8])) revert ZekeErrors.NullifierConsumed();
+       // TODO - Check if uint256 cast here works, or should we have just casted the keccak256 hash to uint256 straight away
+       if (_pubSignals[9] != uint256(_orderId)) revert ZekeErrors.IncorrectOrder();
+       if (!tokenManager.isActualAmountSufficient(_pubSignals[4], order.minFiatRate, order.token, order.amount)) revert ZekeErrors.ActualAmountInsufficient();
+
     //     require(
     //         orderManager.checkId(
     //             _pubSignals[9],
@@ -144,15 +159,6 @@ contract Ramp is ReentrancyGuard, Ownable {
     //             _pubSignals[5]
     //         ),
     //         "Not correct order!"
-    //     );
-    //     require(
-    //         userManager.compareUserId(order.offramper, _pubSignals[6]),
-    //         "not correct offramper!"
-    //     );
-
-    //     require(
-    //         userManager.compareUserId(order.onramper, _pubSignals[7]),
-    //         "not correct onramper!"
     //     );
 
         orderManager.completeOrder(_orderId, _pubSignals[8]);

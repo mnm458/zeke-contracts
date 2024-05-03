@@ -33,7 +33,7 @@ interface IOrderManager {
         address _token, 
         uint256 _amount,
         int256 _minFiatRate,
-        uint64 _dstChainId
+        uint64 _dstchainId
     ) external returns (bytes32);
 
     function commitOrder(address _offramper, bytes32 _orderId) external;
@@ -42,7 +42,7 @@ interface IOrderManager {
 
     function completeOrder(bytes32 _orderId, uint256 nullifier) external;
 
-    function checkNullifier(uint256 nullifier) external view returns (bool);
+    function isNullifierConsumed(uint256 nullifier) external view returns (bool);
 
     function checkId(
         bytes32 _orderId,
@@ -63,6 +63,8 @@ interface ITokenManager {
     function tokenFeed(address _token) external view returns (address);
 
     function isMinFiatRateValid(int256 _minFiatRate, address _token) external view returns (bool);
+
+    function isActualAmountSufficient(uint256 _actualAmount, int256 _minFiatRate, address _token, uint256 _tokenAmount) external view returns (bool);
 
     function addValidTokens(TokenAndFeed[] memory _tokenAndFeeds) external;
 

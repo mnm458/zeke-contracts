@@ -18,14 +18,18 @@ library ZekeErrors {
     error OrderNotFound();
     error OrderClosed();
     error CurrentCommitment();
-
-
     error NoCurrentOrderCommitment();
     error OrderCommitmentExpired();
     error OrderProofInvalid();
     error OrderOpen();
     error NotCurrentCommittedOfframper();
-
     error MinFiatRateInvalid();
     error MinFiatRateNotAccepted();
+
+    // Ramp.completeOrder _pubSignals validation
+    error IncorrectOfframper();
+    error IncorrectOnramper();
+    error NullifierConsumed();
+    error IncorrectOrder();
+    error ActualAmountInsufficient();
 }
