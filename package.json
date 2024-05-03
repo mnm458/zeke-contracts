@@ -1,0 +1,37 @@
+{
+  "name": "zeke-contracts",
+  "version": "1.0.0",
+  "main": "index.js",
+  "repository": "git@github.com:mnm458/zeke-contracts.git",
+  "author": "Mohak <mohaknainmalhotra@gmail.com>",
+  "license": "MIT",
+  "devDependencies": {
+    "@nomicfoundation/hardhat-chai-matchers": "^1.0.6",
+    "@nomicfoundation/hardhat-network-helpers": "^1.0.8",
+    "@nomicfoundation/hardhat-verify": "^1.1.1",
+    "@nomiclabs/hardhat-ethers": "^2.2.2",
+    "@nomiclabs/hardhat-etherscan": "^3.1.7",
+    "@typechain/ethers-v5": "^10.2.0",
+    "@typechain/hardhat": "^6.1.5",
+    "@types/chai": "^4.2.0",
+    "@types/mocha": ">=9.1.0",
+    "@types/node": ">=12.0.0",
+    "chai": "^4.2.0",
+    "ethers": "^5.7.2",
+    "hardhat": "^2.12.6",
+    "hardhat-deploy": "^0.11.34",
+    "hardhat-gas-reporter": "^1.0.8",
+    "module-alias": "^2.2.3",
+    "solidity-coverage": "^0.8.4",
+    "ts-node": ">=8.0.0",
+    "typechain": "^8.1.0",
+    "typescript": ">=4.5.0"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts": "^4.9.2",
+    "@zk-email/contracts": "^3.2.0",
+    "circomlibjs": "^0.1.7",
+    "dotenv": "^16.3.1",
+    "ethereum-waffle": "^4.0.10"
+  }
+}
