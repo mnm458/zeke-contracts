@@ -4,7 +4,7 @@ pragma solidity ^0.8.0;
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { ITokenManager, TokenAndFeed } from "../Interfaces.sol";
 import { ZekeErrors } from '../libraries/ZekeErrors.sol';
-import { AggregatorV3Interface } from '@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol';
+import { AggregatorV3Interface } from "@chainlink/interfaces/feeds/AggregatorV3Interface.sol";
 import { SafeCast } from '@openzeppelin/contracts/utils/math/SafeCast.sol';
 
 contract TokenManager is Ownable, ITokenManager {
