@@ -1,22 +1,22 @@
 // SPDX-License-Identifier: Unlicensed
 pragma solidity ^0.8.0;
 
-import "../Interfaces.sol";
-import "hardhat/console.sol";
+import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
+import { IUserManager } from "../Interfaces.sol";
+import { ZekeErrors } from '../libraries/ZekeErrors.sol';
 
-contract UserManager is IUserManager {
+contract UserManager is IUserManager, Ownable {
     mapping(address => uint256) public userId;
 
     event UserRegistered (uint256 indexed id, address indexed userAddress, string email);
-    function registerUser(address _userAddress, uint256 _userId, string calldata email) external {
-        // add the proof verification part here
-        require(userId[_userAddress] == 0, "Already in use!");
-        userId[_userAddress] = _userId;
 
-        emit UserRegistered(_userId, _userAddress, email);
-    }
+    constructor(address _owner) Ownable(_owner) {}
 
-    function doesUserExist(address _userAddress) external view returns (bool){
+    /**
+     * VIEW FUNCTIONS
+     */
+
+    function doesUserExist(address _userAddress) external view returns (bool) {
         return (userId[_userAddress] != 0);
     }
 
@@ -24,4 +24,21 @@ contract UserManager is IUserManager {
         return (userId[_userAddress] == id);
     }
 
+    /**
+     * STATE-MUTATING FUNCTIONS
+     */
+
+    function registerUser(address _userAddress, uint256 _userId, string calldata email) external {
+        // ** INPUT VALIDATION ** //
+        // add the proof verification part here
+        if (_userAddress == address(0)) revert ZekeErrors.ZeroAddress();
+        if (_userId == 0) revert ZekeErrors.ZeroUint();
+        if (userId[_userAddress] != 0) revert ZekeErrors.UserAlreadyRegistered();
+
+        // ** UPDATE STATE ** //
+        userId[_userAddress] = _userId;
+
+        // ** EMIT EVENT ** //
+        emit UserRegistered(_userId, _userAddress, email);
+    }
 }

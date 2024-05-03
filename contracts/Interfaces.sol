@@ -19,6 +19,11 @@ struct Deposit {
     uint256 amount;
 }
 
+struct TokenAndFeed {
+    address token; // ERC20 token
+    address feed; // Chainlink feed - https://docs.chain.link/data-feeds/price-feeds/addresses?network=base&page=1
+}
+
 /* -------------------- Managers -------------------- */
 interface IOrderManager {
     function addOrder(
@@ -68,9 +73,11 @@ interface IStakeManager {
 }
 
 interface ITokenManager {
-    function addValidTokens(address[] memory tokens) external;
+    function tokenFeed(address _token) external view returns (address);
 
-    function removeValidTokens(address[] memory tokens) external;
+    function addValidTokens(TokenAndFeed[] memory _tokenAndFeeds) external;
+
+    function removeValidTokens(address[] memory _tokens) external;
 
     function isValidToken(address _token) external view returns (bool);
 }
