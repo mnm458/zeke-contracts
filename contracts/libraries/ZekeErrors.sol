@@ -8,21 +8,24 @@ library ZekeErrors {
 
     // UserManager.sol
     error UserAlreadyRegistered();
+    error UserNotRegistered();
 
     // EscrowManager.sol
-    error InsufficientDepositAmount();
+    error InsufficientEscrowedFunds();
 
+    // Ramp.sol
     error TokenNotAccepted();
-    error NoCurrentOrderCommitment();
+    error OrderNotFound();
+    error OrderClosed();
     error CurrentCommitment();
+
+
+    error NoCurrentOrderCommitment();
     error OrderCommitmentExpired();
     error OrderProofInvalid();
-    error OrderNotFound();
     error OrderOpen();
-    error OrderClosed();
     error NotCurrentCommittedOfframper();
 
-    error InsufficientEscrowedFunds();
     error MinFiatRateInvalid();
     error MinFiatRateNotAccepted();
 }

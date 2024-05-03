@@ -6,7 +6,9 @@ import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.s
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
-import { ITokenManager, IOrderManager, IEscrowManager, IUserManager, IVerifier, Order, TokenAndFeed } from "./Interfaces.sol";
+import { ZekeErrors } from './libraries/ZekeErrors.sol';
+
+import { ITokenManager, IEscrowManager, IOrderManager, IUserManager, IVerifier, Order, TokenAndFeed, OrderStatus } from "./Interfaces.sol";
 import { TokenManager } from './managers/TokenManager.sol';
 import { EscrowManager } from './managers/EscrowManager.sol';
 import { OrderManager } from './managers/OrderManager.sol';
@@ -39,27 +41,40 @@ contract Ramp is ReentrancyGuard, Ownable {
      * VIEW FUNCTIONS
      */
 
+    function getOrder(bytes32 _orderId) external view returns (Order memory) {
+        return orderManager.getOrder(_orderId);
+    }
+
 
     /**
      * ONRAMPER FUNCTIONS
      */
 
-    // function addOrder(
-    //     uint256 intentId,
-    //     uint256 requestedAmount,
-    //     uint256 minFiatAmount,
-    //     address tokenAddress
-    // ) external nonReentrant {
-    //     require(tokenManager.isValidToken(tokenAddress), "Not a valid token!");
-    //     //TODO: Add chainlink pricefeed. MCT:= Ratio between said stablecoin and USD. Chainlink price feed to verify min ratio difference is maintained
-    //     orderManager.addOrder(
-    //         intentId,
-    //         requestedAmount,
-    //         minFiatAmount,
-    //         tokenAddress,
-    //         msg.sender
-    //     );
-    // }
+    function addOrder(
+        address _onramper, 
+        address _token, 
+        uint256 _amount,
+        int256 _minFiatRate,
+        uint64 _dstchainId
+    ) external nonReentrant {
+        //** INPUT VALIDATION **//
+        if (_onramper == address(0)) revert ZekeErrors.ZeroAddress();
+        if (_token == address(0)) revert ZekeErrors.ZeroAddress();
+        if (_amount == 0) revert ZekeErrors.ZeroUint();
+        if (_minFiatRate == 0) revert ZekeErrors.ZeroUint();
+        if (_dstchainId == 0) revert ZekeErrors.ZeroUint();
+
+        if (!tokenManager.isValidToken(_token)) revert ZekeErrors.TokenNotAccepted();
+        if (!tokenManager.isMinFiatRateValid(_minFiatRate, _token)) revert ZekeErrors.MinFiatRateInvalid();
+
+        orderManager.addOrder(
+            _onramper,
+            _token,
+            _amount,
+            _minFiatRate,
+            _dstchainId
+        );
+    }
 
     /**
      * OFFRAMPER FUNCTIONS
@@ -70,52 +85,54 @@ contract Ramp is ReentrancyGuard, Ownable {
         userManager.registerUser(msg.sender, _userId, email);
     }
 
+    function commitOrder(bytes32 _orderId, int256 _minFiatRate) external {
+        if (_minFiatRate == 0) revert ZekeErrors.ZeroUint();
+        if (!orderManager.doesOrderExist(_orderId)) revert ZekeErrors.OrderNotFound();
+        Order memory order = orderManager.getOrder(_orderId);
 
-    // function getOrder(uint256 intentId) external view returns (Order memory) {
-    //     return orderManager.getOrder(intentId);
-    // }
+        if (order.orderStatus == OrderStatus.CLOSED) revert ZekeErrors.OrderClosed();
+        if (order.orderStatus == OrderStatus.COMMITTED && order.commitmentExpiryTime > block.timestamp) revert ZekeErrors.CurrentCommitment();
 
-    // function commitOrder(uint256 intentId) external {
-    //     Order memory order = orderManager.getOrder(intentId);
-    //     bytes32 depositKey = stakeManager.getDepositID(msg.sender, order.token);
-    //     Deposit memory deposit = stakeManager.getDeposit(depositKey);
+        if (!tokenManager.isMinFiatRateValid(_minFiatRate, order.token)) revert ZekeErrors.MinFiatRateInvalid();
+        if (_minFiatRate < order.minFiatRate) revert ZekeErrors.MinFiatRateNotAccepted();
 
-    //     require(order.token == deposit.token, "Not matching tokens");
-    //     require(order.requestedAmount <= deposit.amount, "Not enough stake!");
-    //     require(userManager.doesUserExist(msg.sender), "Not registered user!");
+        if (escrowManager.getDeposit(msg.sender, order.token) < order.amount) revert ZekeErrors.InsufficientEscrowedFunds();
+        if (userManager.doesUserExist(msg.sender)) revert ZekeErrors.UserNotRegistered();
 
-    //     orderManager.commitOrder(intentId, msg.sender);
-    //     stakeManager.commitDeposit(depositKey, order.requestedAmount);
-    // }
+        orderManager.commitOrder(msg.sender, _orderId);
+        escrowManager.commitDeposit(msg.sender, order.token, order.amount);
+    }
 
-    // function uncommitOrder(uint256 intentId) external {
-    //     Order memory order = orderManager.getOrder(intentId);
-    //     require(order.offramper == msg.sender, "not offramper!");
+    function uncommitOrder(bytes32 _orderId) external {
+        if (!orderManager.doesOrderExist(_orderId)) revert ZekeErrors.OrderNotFound();
+        Order memory order = orderManager.getOrder(_orderId);
+        if (order.orderStatus == OrderStatus.CLOSED) revert ZekeErrors.OrderClosed();
+        if (order.orderStatus == OrderStatus.OPEN) revert ZekeErrors.OrderOpen();
+        if (order.offramper != msg.sender) revert ZekeErrors.NotCurrentCommittedOfframper();
 
-    //     bytes32 depositKey = stakeManager.getDepositID(msg.sender, order.token);
+        orderManager.uncommitOrder(_orderId);
+        escrowManager.uncommitDeposit(msg.sender, order.token, order.amount);
+    }
 
-    //     stakeManager.uncommitDeposit(depositKey, order.requestedAmount);
-    //     orderManager.uncommitOrder(intentId);
-    // }
+    function completeOrder(
+        bytes32 _orderId,
+        bytes calldata _proof
+    ) external nonReentrant {
+    //     Order memory order = orderManager.getOrder(_orderId);
 
-    // function completeOrder(
-    //     uint256 intentId,
-    //     bytes calldata proof
-    // ) external nonReentrant {
-    //     Order memory order = orderManager.getOrder(intentId);
-
-    //     (bool isValid, bytes memory _pubSignalsBytes) = verifier.verify(proof);
+    //     if (!orderManager.doesOrderExist(_orderId)) revert ZekeErrors.OrderNotFound();
+    //     if (order.orderStatus != OrderStatus.COMMITTED) revert ZekeErrors.NoCurrentOrderCommitment();
+    //     if (order.commitmentExpiryTime < block.timestamp) revert ZekeErrors.OrderCommitmentExpired();
+    
+    //     (bool isValid, bytes memory _pubSignalsBytes) = verifier.verify(_proof);
+    //     if (!isValid) revert ZekeErrors.OrderProofInvalid();
 
     //     uint[10] memory _pubSignals = abi.decode(_pubSignalsBytes, (uint[10]));
 
+    //     // ** Validate _pubSignals ** //
     //     // TODO: add more checks here
 
-    //     require(isValid, "Not valid proof!");
-    //     require(
-    //         order.creationTimestamp != 0,
-    //         "Order does not exist for the given intentId"
-    //     );
-    //     require(_pubSignals[4] > order.minFiatAmount, "Not enough payment!");
+    //     require(_pubSignals[4] > order.minFiatRate, "Not enough payment!");
     //     require(
     //         orderManager.checkNullifier(_pubSignals[8]),
     //         "Nullifier before!"
@@ -138,16 +155,16 @@ contract Ramp is ReentrancyGuard, Ownable {
     //         "not correct onramper!"
     //     );
 
-    //     orderManager.completeOrder(intentId, _pubSignals[8]);
+    //     orderManager.completeOrder(_orderId, _pubSignals[8]);
 
     //     IERC20 token = IERC20(order.token);
     //     token.safeTransfer(order.onramper, order.requestedAmount);
-    // }
+    }
 
-    // function createDeposit(
-    //     address _token,
-    //     uint256 _amount
-    // ) external nonReentrant {
+    function deposit(
+        address _token,
+        uint256 _amount
+    ) external nonReentrant {
     //     IERC20 token = IERC20(_token);
     //     uint256 allowance = token.allowance(msg.sender, address(this));
 
@@ -157,7 +174,7 @@ contract Ramp is ReentrancyGuard, Ownable {
 
     //     stakeManager.createDeposit(_token, _amount, msg.sender);
     //     token.safeTransferFrom(msg.sender, address(this), _amount);
-    // }
+    }
 
     /* TODO: Will work on this later */
     // function _removeDeposit(address _token, uint256 _amount) internal nonReentrant {

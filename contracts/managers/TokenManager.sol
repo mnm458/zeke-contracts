@@ -22,7 +22,7 @@ contract TokenManager is Ownable, ITokenManager {
         return tokenFeed[_token] != address(0);
     }
 
-    function isMinFiatRateValid(int256 _minFiatRate, address _token) internal view returns (bool) {
+    function isMinFiatRateValid(int256 _minFiatRate, address _token) external view returns (bool) {
         // https://docs.chain.link/data-feeds/using-data-feeds
         address _feed = tokenFeed[_token];
         (

@@ -43,7 +43,7 @@ contract EscrowManager is Ownable, ReentrancyGuard, IEscrowManager {
         if (_amount == 0) revert ZekeErrors.ZeroUint();
 
         uint256 currentDeposit = deposits[_offramper][_token];
-        if (currentDeposit < _amount) revert ZekeErrors.InsufficientDepositAmount();
+        if (currentDeposit < _amount) revert ZekeErrors.InsufficientEscrowedFunds();
 
         // TODO: in future, need to keep track of committed orders also
         deposits[_offramper][_token] = currentDeposit - _amount;

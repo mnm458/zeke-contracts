@@ -1,16 +1,20 @@
 // SPDX-License-Identifier: Unlicensed
 pragma solidity ^0.8.0;
 
+enum OrderStatus { OPEN, COMMITTED, CLOSED }
+
 struct Order {
-    uint120 creationTimestamp;
-    uint120 offramperDeadline;
-    uint16 status;
+    // Slot - 20 + 4 + 8
+    address token; // 'token == address(0)' means order does not exist, we take care to ensure valid order cannot have token == address(0)
+    uint32 commitmentExpiryTime;
+    uint64 dstchainId;
+    // Slot - 20 + 1
     address onramper;
+    OrderStatus orderStatus;
+    // 1 slot each
     address offramper;
-    address token;
-    uint256 requestedAmount;
-    uint256 minFiatAmount;
-    uint256 intentId;
+    uint256 amount;
+    int256 minFiatRate;
 }
 
 struct TokenAndFeed {
@@ -20,28 +24,30 @@ struct TokenAndFeed {
 
 /* -------------------- Managers -------------------- */
 interface IOrderManager {
+    function getOrder(bytes32 orderId) external view returns (Order memory);
+
+    function doesOrderExist(bytes32 orderId) external view returns (bool);
+
     function addOrder(
-        uint256 intentId,
-        uint256 requestedAmount,
-        uint256 minFiatAmount,
-        address tokenAddress,
-        address onramper
-    ) external;
+        address _onramper, 
+        address _token, 
+        uint256 _amount,
+        int256 _minFiatRate,
+        uint64 _dstchainId
+    ) external returns (bytes32);
 
-    function getOrder(uint256 intentId) external view returns (Order memory);
+    function commitOrder(address _offramper, bytes32 _orderId) external;
 
-    function commitOrder(uint256 intentId, address offramper) external;
+    function uncommitOrder(bytes32 _orderId) external;
 
-    function uncommitOrder(uint256 intentId) external;
-
-    function completeOrder(uint256 intentId, uint256 nullifier) external;
+    function completeOrder(bytes32 _orderId, uint256 nullifier) external;
 
     function checkNullifier(uint256 nullifier) external view returns (bool);
 
     function checkId(
-        uint256 intentId,
-        uint256 amount,
-        uint256 timestamp
+        bytes32 _orderId,
+        uint256 _amount,
+        uint256 _timestamp
     ) external view returns (bool);
 }
 
@@ -54,6 +60,8 @@ interface IEscrowManager {
 
 interface ITokenManager {
     function tokenFeed(address _token) external view returns (address);
+
+    function isMinFiatRateValid(int256 _minFiatRate, address _token) external view returns (bool);
 
     function addValidTokens(TokenAndFeed[] memory _tokenAndFeeds) external;
 
