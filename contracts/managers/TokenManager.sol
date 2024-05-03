@@ -13,6 +13,9 @@ contract TokenManager is Ownable, ITokenManager {
     int256 public constant MAX_FEED_RATE_DIFF = 1e16; 
     mapping(address => address) public tokenFeed;
 
+    event TokenAdded(address indexed token, address indexed feed);
+    event TokenRemoved(address indexed token);
+
     constructor(address _owner) Ownable(_owner) {}
 
     /**
@@ -75,7 +78,7 @@ contract TokenManager is Ownable, ITokenManager {
         for (uint256 index = 0; index < tokenLength; index++) {
             address token = _tokens[index];
             tokenFeed[token] = address(0);
-            // TODO - Emit event
+            emit TokenRemoved(token);
         }
     }
 
@@ -91,7 +94,7 @@ contract TokenManager is Ownable, ITokenManager {
             if(token == address(0)) revert ZekeErrors.ZeroAddress();
             if(feed == address(0)) revert ZekeErrors.ZeroAddress();
             tokenFeed[token] = feed;
-            // TODO - Emit event
+            emit TokenAdded(token, feed);
         }
     }
 }

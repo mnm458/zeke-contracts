@@ -11,7 +11,11 @@ contract OrderManager is Ownable, ReentrancyGuard, IOrderManager {
     // Start as 'constant', can set as immutable or dynamic value later
     uint256 public constant COMMITMENT_EXPIRY_TIME = 1800;
     
-    event OrderCreation(bytes32 indexed intentId);
+    event OrderCreated(bytes32 indexed orderId);
+    event OrderCompleted(bytes32 indexed orderId);
+    event OrderCommitted(bytes32 indexed orderId);
+    event OrderUncommitted(bytes32 indexed orderId);
+
     mapping(bytes32 => Order) public orders;
     mapping(uint256 => bool) public nullifierGraveyard;
 
@@ -70,7 +74,7 @@ contract OrderManager is Ownable, ReentrancyGuard, IOrderManager {
 
         orders[orderId] = newOrder;
 
-        emit OrderCreation(orderId);
+        emit OrderCreated(orderId);
         return orderId;
     }
 
@@ -83,8 +87,7 @@ contract OrderManager is Ownable, ReentrancyGuard, IOrderManager {
         order.orderStatus = OrderStatus.COMMITTED;
         order.commitmentExpiryTime = uint32(block.timestamp + COMMITMENT_EXPIRY_TIME);
         order.offramper = _offramper;
-
-        // TODO - Emit event
+        emit OrderCommitted(_orderId);
     }
 
     function uncommitOrder(bytes32 _orderId) external onlyOwner {
@@ -96,6 +99,7 @@ contract OrderManager is Ownable, ReentrancyGuard, IOrderManager {
         order.offramper = address(0);
 
         //** EMIT EVENT **//
+        emit OrderUncommitted(_orderId);
     }
 
     /**
@@ -108,7 +112,6 @@ contract OrderManager is Ownable, ReentrancyGuard, IOrderManager {
 
         // must be done by ramp
         nullifierGraveyard[_nullifier] = true;
-
-        // TODO - Emit event
+        emit OrderCompleted(_orderId);
     }
 }

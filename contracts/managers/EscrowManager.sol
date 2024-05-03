@@ -7,8 +7,10 @@ import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.s
 import { IEscrowManager } from "../Interfaces.sol";
 
 contract EscrowManager is Ownable, ReentrancyGuard, IEscrowManager {
-    event Deposited(address indexed user, address indexed token, uint256 amount);
-    event Withdrawn(address indexed user, address indexed token, uint256 amount);
+    event Deposit(address indexed user, address indexed token, uint256 amount);
+    event DepositCommitted(address indexed user, address indexed token, uint256 amount);
+    event DepositUncommitted(address indexed user, address indexed token, uint256 amount);
+    event Withdraw(address indexed user, address indexed token, uint256 amount);
 
     // offramper => token => deposit amount
     mapping(address => mapping(address => uint256)) private deposits;
@@ -33,7 +35,7 @@ contract EscrowManager is Ownable, ReentrancyGuard, IEscrowManager {
         if (_offramper == address(0)) revert ZekeErrors.ZeroAddress();
         if (_amount == 0) revert ZekeErrors.ZeroUint();
         deposits[_offramper][_token] += _amount;
-        // TODO - Emit event
+        emit Deposit(_offramper, _token, _amount);
     }
 
     function withdraw(address _offramper, address _token, uint256 _amount) external nonReentrant onlyOwner {
@@ -41,7 +43,7 @@ contract EscrowManager is Ownable, ReentrancyGuard, IEscrowManager {
         if (_offramper == address(0)) revert ZekeErrors.ZeroAddress();
         if (_amount == 0) revert ZekeErrors.ZeroUint();
         deposits[_offramper][_token] -= _amount;
-        // TODO - Emit event
+        emit Withdraw(_offramper, _token, _amount);
     }
 
     // Remove deposit from escrowed funds
@@ -55,7 +57,7 @@ contract EscrowManager is Ownable, ReentrancyGuard, IEscrowManager {
 
         // TODO: in future, need to keep track of committed orders also
         deposits[_offramper][_token] = currentDeposit - _amount;
-        // TODO - Emit event
+        emit DepositCommitted(_offramper, _token, _amount);
     }
 
     // Return deposit to escrowed funds
@@ -68,6 +70,6 @@ contract EscrowManager is Ownable, ReentrancyGuard, IEscrowManager {
         if (_amount == 0) revert ZekeErrors.ZeroUint();
 
         deposits[_offramper][_token] += _amount;
-        // TODO - Emit event
+        emit DepositUncommitted(_offramper, _token, _amount);
     }
 }
