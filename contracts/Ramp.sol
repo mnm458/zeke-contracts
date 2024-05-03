@@ -45,7 +45,6 @@ contract Ramp is ReentrancyGuard, Ownable {
         return orderManager.getOrder(_orderId);
     }
 
-
     /**
      * ONRAMPER FUNCTIONS
      */
@@ -56,7 +55,7 @@ contract Ramp is ReentrancyGuard, Ownable {
         uint256 _amount,
         int256 _minFiatRate,
         uint64 _dstChainId
-    ) external nonReentrant {
+    ) external nonReentrant returns (bytes32) {
         //** INPUT VALIDATION **//
         if (_onramper == address(0)) revert ZekeErrors.ZeroAddress();
         if (_token == address(0)) revert ZekeErrors.ZeroAddress();
@@ -67,7 +66,7 @@ contract Ramp is ReentrancyGuard, Ownable {
         if (!tokenManager.isValidToken(_token)) revert ZekeErrors.TokenNotAccepted();
         if (!tokenManager.isMinFiatRateValid(_minFiatRate, _token)) revert ZekeErrors.MinFiatRateInvalid();
 
-        orderManager.addOrder(
+        return orderManager.addOrder(
             _onramper,
             _token,
             _amount,
