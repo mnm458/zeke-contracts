@@ -2,7 +2,8 @@
 pragma solidity ^0.8.24;
 
 import { Script, console } from "forge-std/Script.sol";
-import { PaypalVerifier } from "../src/Verifier.sol";
+import { Verifier } from "../src/Verifier.sol";
+import { EmailVerifier } from "../src/verifiers/EmailVerifier.sol";
 import { Ramp } from "../src/Ramp.sol";
 import { TokenAndFeed } from "../src/Interfaces.sol";
 
@@ -23,14 +24,17 @@ contract DeployScript is Script {
         });
 
         // DEPLOYMENT SCRIPT
-        console.log("Deploying Verifier contract");
+        console.log("Deploying Zeke contracts");
         uint256 deployerPrivateKey = vm.envUint("PRIV_KEY");
         vm.startBroadcast(deployerPrivateKey);
-        address[] memory verifiers = new address[](2);
-        PaypalVerifier verifier = new PaypalVerifier(verifiers);
-        Ramp ramp = new Ramp(address(verifier), rampOwner, new TokenAndFeed[](0));
+        EmailVerifier emailVerifier = new EmailVerifier();
+        address[] memory verifiers = new address[](1);
+        Verifier verifier = new Verifier(verifiers);
+        Ramp ramp = new Ramp(address(verifier), rampOwner, tokenAndFeeds);
         vm.stopBroadcast();
-        console.log("Deployed Test contract to ", address(verifier));
+
+        console.log("Deployed EmailVerifier contract to ", address(emailVerifier));
+        console.log("Deployed Verifier contract to ", address(verifiers));
         console.log("Deployed Ramp contract to ", address(ramp));
     }
 }

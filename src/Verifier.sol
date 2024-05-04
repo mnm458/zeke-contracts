@@ -3,7 +3,7 @@ pragma solidity ^0.8.0;
 
 import "./Interfaces.sol";
 
-contract PaypalVerifier is IVerifier {
+contract Verifier is IVerifier {
     mapping(uint256 => address) internal verifiers;
 
     constructor(address[] memory _verifiers) {
