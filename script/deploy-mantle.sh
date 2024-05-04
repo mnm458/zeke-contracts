@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# Deploy script for Mantle testnet, which uses Blockscout block explorer
+
 # Get current environment variables defined in .env
 source .env
 echo "Running deploy script for Mantle"

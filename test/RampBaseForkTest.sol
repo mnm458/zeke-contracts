@@ -14,7 +14,7 @@ import { ZekeErrors } from '../src/libraries/ZekeErrors.sol';
 import { ConstructorArgs } from "../script/ConstructorArgs.sol";
 import { console } from "forge-std/Test.sol";
 
-contract RampForkTest is TestBase {
+contract RampBaseForkTest is TestBase {
     IRamp ramp;
     ITokenManager tokenManager;
     IEscrowManager escrowManager;
