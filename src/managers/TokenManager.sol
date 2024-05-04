@@ -10,7 +10,11 @@ import { SafeCast } from '@openzeppelin/contracts/utils/math/SafeCast.sol';
 contract TokenManager is Ownable, ITokenManager {
     // MAX 1% difference between Chainlink feed rate and minFiatRate
     // Start as 'constant', can set as immutable or dynamic value later
-    int256 public constant MAX_FEED_RATE_DIFF = 1e16; 
+    int256 public constant MAX_FEED_RATE_DIFF = 1e16;
+
+    // Escape address when the Chainlink feed is not available - very hacky solution to enable deployment on Mantle
+    address public constant ESCAPE_ADDRESS = 0x000000000000000000000000000000000000dEaD;
+
     mapping(address => address) public tokenFeed;
 
     event TokenAdded(address indexed token, address indexed feed);
@@ -28,6 +32,10 @@ contract TokenManager is Ownable, ITokenManager {
 
     function getTokenFiatRate(address _token) external view returns (int256 fiatRate, uint256 decimals) {
         address _feed = tokenFeed[_token];
+        
+        // HACKY SOLUTION TO ENABLE DEPLOYMENT ON MANTLE
+        if (_feed == ESCAPE_ADDRESS) return (1e8, 8);
+
         uint8 decimalsRaw = AggregatorV3Interface(_feed).decimals();
         (
             /* uint80 roundID */,
@@ -42,6 +50,10 @@ contract TokenManager is Ownable, ITokenManager {
     function isMinFiatRateValid(int256 _minFiatRate, address _token) external view returns (bool) {
         // https://docs.chain.link/data-feeds/using-data-feeds
         address _feed = tokenFeed[_token];
+
+        // HACKY SOLUTION TO ENABLE DEPLOYMENT ON MANTLE
+        if (_feed == ESCAPE_ADDRESS) return (true);
+
         (
             /* uint80 roundID */,
             int256 chainlinkFeedRate,
@@ -61,7 +73,12 @@ contract TokenManager is Ownable, ITokenManager {
     }
 
     function isActualAmountSufficient(uint256 _actualAmount, int256 _minFiatRate, address _token, uint256 _tokenAmount) external view returns (bool) {
-        uint8 decimals = AggregatorV3Interface(tokenFeed[_token]).decimals();
+        address _feed = tokenFeed[_token];
+
+        // HACKY SOLUTION TO ENABLE DEPLOYMENT ON MANTLE
+        if (_feed == ESCAPE_ADDRESS) return (true);
+
+        uint8 decimals = AggregatorV3Interface(_feed).decimals();
         
         // Will revert if _minFiatRate is a negative value
         uint256 _minFiatRateCasted = SafeCast.toUint256(_minFiatRate);
