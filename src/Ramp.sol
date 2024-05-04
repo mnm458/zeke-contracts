@@ -126,7 +126,7 @@ contract Ramp is ReentrancyGuard, Ownable, IRamp {
         if (_minFiatRate < order.minFiatRate) revert ZekeErrors.MinFiatRateNotAccepted();
 
         if (escrowManager.getDeposit(msg.sender, order.token) < order.amount) revert ZekeErrors.InsufficientEscrowedFunds();
-        if (userManager.doesUserExist(msg.sender)) revert ZekeErrors.UserNotRegistered();
+        if (!userManager.doesUserExist(msg.sender)) revert ZekeErrors.UserNotRegistered();
 
         // Uncommit previous expired commitment by another user
         if (order.orderStatus == OrderStatus.COMMITTED && order.offramper != msg.sender) {

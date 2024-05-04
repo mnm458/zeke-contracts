@@ -60,7 +60,7 @@ contract RampBaseForkTest is TestBase {
         vm.expectRevert();
         tokenManager.removeValidTokens(new address[](1));
         vm.expectRevert();
-        userManager.registerUser(address(1), 1, "email");
+        userManager.registerUser(DEPLOYER, 1, "email");
 
         vm.expectRevert();
         orderManager.addOrder(address(1), address(1), 1, 1, 1);
@@ -120,6 +120,7 @@ contract RampBaseForkTest is TestBase {
         bytes32 orderId = ramp.addOrder(address(1), USDC, 1, 1e8, 1);
 
         vm.startPrank(USER_2);
+        ramp.registerUser(1, "email");
         deal(USDC, USER_2, 1e18);
         IERC20(USDC).approve(address(ramp), 1e18);
         // Add order for USDC on Base testnet
@@ -133,6 +134,7 @@ contract RampBaseForkTest is TestBase {
         bytes32 orderId = ramp.addOrder(address(1), USDC, 1, 1e8, 1);
 
         vm.startPrank(USER_2);
+        ramp.registerUser(1, "email");
         deal(USDC, USER_2, 1e18);
         IERC20(USDC).approve(address(ramp), 1e18);
         // Add order for USDC on Base testnet
@@ -144,6 +146,7 @@ contract RampBaseForkTest is TestBase {
         vm.warp(block.timestamp + 1801);
 
         vm.startPrank(USER_3);
+        ramp.registerUser(2, "email");
         deal(USDC, USER_3, 1e18);
         IERC20(USDC).approve(address(ramp), 1e18);
         // Add order for USDC on Base testnet
@@ -162,6 +165,7 @@ contract RampBaseForkTest is TestBase {
         bytes32 orderId = ramp.addOrder(address(1), USDC, 1, 1e8, 1);
 
         vm.startPrank(USER_2);
+        ramp.registerUser(1, "email");
         deal(USDC, USER_2, 1e18);
         IERC20(USDC).approve(address(ramp), 1e18);
         // Add order for USDC on Base testnet

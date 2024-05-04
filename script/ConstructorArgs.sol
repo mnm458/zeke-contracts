@@ -19,8 +19,8 @@ contract ConstructorArgs {
         });
             // usdt
         tokenAndFeeds[84532][1] = TokenAndFeed({
-            // Not a canonical USDT token, just the USDT that appeared in last 20 pages of block explorer ERC20 tokens
-            token: 0xF6C7048F2bCF45E414ac727471FbfE367a424e30,
+            // Our own USDT with public mint function
+            token: 0xb736F7EFd4e7823250e063283d2AB6ED2df84E34,
             feed: 0x3ec8593F930EA45ea58c968260e6e9FF53FC934f
         });
         ccipRouterAddress[84532] = 0xD3b06cEbF099CE7DA4AcCf578aaebFDBd6e88a93;
