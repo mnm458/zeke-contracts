@@ -2,7 +2,11 @@
 
 Smart contracts for Zeke - a zero-knowledge proof powered protocol that enables anyone to onramp and offramp in a completely decentralized peer-to-peer manner.
 
-Zeke smart contracts include a Ramp contract which is the single point of contact for users, and handles all the business logic and intricacies of creating, managing, completing and verifying orders. Ramp contract works in conjunction with Manager contracts - OrderManager, TokenManager, UserManager and EscrowManager. The Ramp also integrates with the Verifier contract which validates and verifies our ZK circuit proofs.
+Zeke smart contracts include a Ramp contract which is the single point of contact for users, and handles all the business logic and intricacies of creating, managing, completing and verifying orders. Ramp contract works in conjunction with the Manager contracts - OrderManager, TokenManager, UserManager and EscrowManager - to fulfil these roles. The Ramp also integrates with the Verifier contract which validates and verifies our ZK circuit proofs.
+
+# Architecture
+
+![Architecture](zeke-diagram.png)
 
 ## System requirements
 
@@ -31,6 +35,9 @@ Build and view Documentation - `bash script/serve-docs.sh`
 Chainlink Price Feeds
 - Validate minimum requested fiat conversion rate for onrampers
 - Validate fiat amounts paid by offrampers against the onramper requested amounts
+
+CCIP
+- ChainlinkAdaptor library written to facilitate cross-chain token transfers during order completion
 
 ## Deployments
 
