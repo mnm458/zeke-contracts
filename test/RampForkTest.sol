@@ -31,8 +31,9 @@ contract RampForkTest is TestBase {
         }
         EmailVerifier emailVerifier = new EmailVerifier();    
         address[] memory verifiers = new address[](1);
+        verifiers[0] = address(emailVerifier);
         Verifier verifier = new Verifier(verifiers);
-        ramp = new Ramp(address(verifier), DEPLOYER, tokenAndFeeds);    
+        ramp = new Ramp(DEPLOYER, address(verifier), constructorArgs.ccipRouterAddress(block.chainid), tokenAndFeeds);    
     }
 
     function test_deploy() public {

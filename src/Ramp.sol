@@ -7,7 +7,8 @@ import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 import { ZekeErrors } from './libraries/ZekeErrors.sol';
-
+// COMMENT BACK FOR CCIP IMPLEMENTATION
+// import { ChainlinkAdaptor } from './libraries/ChainlinkAdaptor.sol';
 import { ITokenManager, IEscrowManager, IOrderManager, IUserManager, IVerifier, IRamp, Order, TokenAndFeed, OrderStatus } from "./Interfaces.sol";
 import { TokenManager } from './managers/TokenManager.sol';
 import { EscrowManager } from './managers/EscrowManager.sol';
@@ -22,10 +23,22 @@ contract Ramp is ReentrancyGuard, Ownable, IRamp {
     IOrderManager public immutable orderManager;
     IUserManager public immutable userManager;
     IVerifier public immutable verifier;
+    address public immutable ccipRouter;
+
+    event TokensTransferredToCCIP(
+        bytes32 indexed messageId, 
+        uint64 indexed destinationChainSelector,
+        address receiver,
+        address token,
+        uint256 tokenAmount,
+        address feeToken,
+        uint256 fees 
+    );
 
     constructor(
-        address _verifier,
         address _owner,
+        address _verifier,
+        address _ccipRouter,
         TokenAndFeed[] memory _tokenAndFeeds
     ) Ownable(_owner) {
         // Deploy Manager contracts, and make this contract the owner for all Manager contracts
@@ -33,6 +46,7 @@ contract Ramp is ReentrancyGuard, Ownable, IRamp {
         escrowManager = new EscrowManager(address(this));
         orderManager = new OrderManager(address(this));
         userManager = new UserManager(address(this));
+        ccipRouter = _ccipRouter;
         verifier = IVerifier(_verifier);
         tokenManager.addValidTokens(_tokenAndFeeds);
     }
@@ -70,14 +84,14 @@ contract Ramp is ReentrancyGuard, Ownable, IRamp {
         address _token, 
         uint256 _amount,
         int256 _minFiatRate,
-        uint64 _dstChainId
+        uint64 _dstChainSelector
     ) external nonReentrant returns (bytes32) {
         //** INPUT VALIDATION **//
         if (_onramper == address(0)) revert ZekeErrors.ZeroAddress();
         if (_token == address(0)) revert ZekeErrors.ZeroAddress();
         if (_amount == 0) revert ZekeErrors.ZeroUint();
         if (_minFiatRate == 0) revert ZekeErrors.ZeroUint();
-        if (_dstChainId == 0) revert ZekeErrors.ZeroUint();
+        if (_dstChainSelector == 0) revert ZekeErrors.ZeroUint();
 
         if (!tokenManager.isValidToken(_token)) revert ZekeErrors.TokenNotAccepted();
         if (!tokenManager.isMinFiatRateValid(_minFiatRate, _token)) revert ZekeErrors.MinFiatRateInvalid();
@@ -87,7 +101,7 @@ contract Ramp is ReentrancyGuard, Ownable, IRamp {
             _token,
             _amount,
             _minFiatRate,
-            _dstChainId
+            _dstChainSelector
         );
     }
 
@@ -169,13 +183,33 @@ contract Ramp is ReentrancyGuard, Ownable, IRamp {
 
         orderManager.completeOrder(_orderId, _pubSignals[8]);
 
-        if (order.dstChainId == block.chainid) {
-            IERC20(order.token).safeTransfer(order.onramper, order.amount);
-        } else {
-            // https://docs.chain.link/ccip/tutorials/cross-chain-tokens
-            // TODO - Call CCIPRouter to perform cross-chain transfer
-            // TO DISCUSS - Need to pay fee to use CCIPRouter, who pays?
-        }
+        IERC20(order.token).safeTransfer(order.onramper, order.amount);
+
+        // COMMENT BACK FOR CCIP IMPLEMENTATION - must also make function payable
+        // if (order.dstChainSelector == block.chainid) {
+        //     IERC20(order.token).safeTransfer(order.onramper, order.amount);
+        // } else {
+        //     // https://docs.chain.link/ccip/tutorials/cross-chain-tokens
+
+        //     IERC20(order.token).approve(ccipRouter, order.amount);
+        //     bytes32 ccipMessageId = ChainlinkAdaptor.transferTokensPayNative(
+        //         order.dstChainSelector,
+        //         order.onramper,
+        //         order.token,
+        //         order.amount,
+        //         ccipRouter
+        //     );
+
+        //     emit TokensTransferredToCCIP(
+        //         ccipMessageId,
+        //         order.dstChainSelector,
+        //         order.onramper,
+        //         order.token,
+        //         order.amount,
+        //         address(0),
+        //         msg.value
+        //     );
+        // }
     }
 
     function deposit(

@@ -22,7 +22,7 @@ contract DeployScript is Script, ConstructorArgs {
         EmailVerifier emailVerifier = new EmailVerifier();
         address[] memory verifiers = new address[](1);
         Verifier verifier = new Verifier(verifiers);
-        Ramp ramp = new Ramp(address(verifier), rampOwner, tokenAndFeeds);
+        Ramp ramp = new Ramp(rampOwner, address(verifier), ccipRouterAddress[chainId], tokenAndFeeds);
         vm.stopBroadcast();
 
         console.log("Deployed EmailVerifier contract to ", address(emailVerifier));

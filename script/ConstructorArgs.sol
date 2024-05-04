@@ -5,9 +5,12 @@ import { TokenAndFeed } from "../src/Interfaces.sol";
 contract ConstructorArgs {
     // chainId => TokenAndFeed[]
     mapping (uint256 => TokenAndFeed[]) public tokenAndFeeds;
+    mapping (uint256 => address) public ccipRouterAddress;
 
     constructor() {
-        // Base Sepolia values
+        /**
+         * BASE SEPOLIA TESTNET
+         */
         tokenAndFeeds[84532] = new TokenAndFeed[](2);
             // usdc
         tokenAndFeeds[84532][0] = TokenAndFeed({
@@ -20,8 +23,12 @@ contract ConstructorArgs {
             token: 0xF6C7048F2bCF45E414ac727471FbfE367a424e30,
             feed: 0x3ec8593F930EA45ea58c968260e6e9FF53FC934f
         });
+        ccipRouterAddress[84532] = 0xD3b06cEbF099CE7DA4AcCf578aaebFDBd6e88a93;
 
-        // Base Mainnet values
+        /**
+         * BASE MAINNET
+         */
+
         tokenAndFeeds[8453] = new TokenAndFeed[](2);
             // usdc
         tokenAndFeeds[8453][0] = TokenAndFeed({
@@ -31,8 +38,12 @@ contract ConstructorArgs {
             // usdt
             // No canonical address for USDT found - https://base.l2scan.co/tokens has a USDT with with 104000 total supply which doesn't seem right. Also Base is not listed in https://tether.to/en/supported-protocols/
             // Strange that Chainlink has a USDT feed for Base Mainnet
+        ccipRouterAddress[8453] = 0x881e3A65B4d4a04dD529061dd0071cf975F58bCD;
 
-        // Mantle Mainnet values
+        /**
+         * MANTLE MAINNET
+         */
+
         tokenAndFeeds[5000] = new TokenAndFeed[](2);
             // usdc
         tokenAndFeeds[5000][0] = TokenAndFeed({
@@ -46,5 +57,8 @@ contract ConstructorArgs {
             // Burn address because no Chainlink feed for Mantle
             feed: 0x000000000000000000000000000000000000dEaD
         });
+        // Burn address because no CCIP router for Mantle
+        ccipRouterAddress[5000] = 0x000000000000000000000000000000000000dEaD;
+
     }
 }

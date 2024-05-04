@@ -47,7 +47,7 @@ contract OrderManager is Ownable, ReentrancyGuard, IOrderManager {
         address _token, 
         uint256 _amount,
         int256 _minFiatRate,
-        uint64 _dstChainId
+        uint64 _dstChainSelector
     ) external nonReentrant onlyOwner returns (bytes32) {
         // Assume input validation done in entrypoint in Ramp.sol
 
@@ -57,7 +57,7 @@ contract OrderManager is Ownable, ReentrancyGuard, IOrderManager {
         Order memory newOrder = Order({
             token: _token, 
             commitmentExpiryTime: 0,
-            dstChainId: _dstChainId,
+            dstChainSelector: _dstChainSelector,
             onramper: _onramper,
             orderStatus: OrderStatus.OPEN,
             offramper: address(0),
