@@ -28,7 +28,7 @@ contract UserManager is IUserManager, Ownable {
      * STATE-MUTATING FUNCTIONS
      */
 
-    function registerUser(address _userAddress, uint256 _userId, string calldata email) external {
+    function registerUser(address _userAddress, uint256 _userId, string calldata email) external onlyOwner {
         // ** INPUT VALIDATION ** //
         // add the proof verification part here
         if (_userAddress == address(0)) revert ZekeErrors.ZeroAddress();

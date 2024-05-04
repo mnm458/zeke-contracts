@@ -82,7 +82,8 @@ contract OrderManager is Ownable, ReentrancyGuard, IOrderManager {
      * OFFRAMPER FUNCTIONS
      */
 
-    function commitOrder(address _offramper, bytes32 _orderId) external onlyOwner {
+    function commitOrder(address _offramper, bytes32 _orderId) external nonReentrant onlyOwner {
+        // Assume input validation done in entrypoint in Ramp.sol
         Order storage order = orders[_orderId];
         order.orderStatus = OrderStatus.COMMITTED;
         order.commitmentExpiryTime = uint32(block.timestamp + COMMITMENT_EXPIRY_TIME);
@@ -90,9 +91,8 @@ contract OrderManager is Ownable, ReentrancyGuard, IOrderManager {
         emit OrderCommitted(_orderId);
     }
 
-    function uncommitOrder(bytes32 _orderId) external onlyOwner {
-        //** UPDATE STATE **//
-
+    function uncommitOrder(bytes32 _orderId) external nonReentrant onlyOwner {
+        // Assume input validation done in entrypoint in Ramp.sol
         Order storage order = orders[_orderId];
         order.orderStatus = OrderStatus.OPEN;
         order.commitmentExpiryTime = 0;

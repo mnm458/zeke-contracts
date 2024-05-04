@@ -41,8 +41,20 @@ contract Ramp is ReentrancyGuard, Ownable, IRamp {
      * VIEW FUNCTIONS
      */
 
+    function getDeposit(address _user, address _token) external view returns (uint256 deposit) {
+        return escrowManager.getDeposit(_user, _token);
+    }
+
     function getOrder(bytes32 _orderId) external view returns (Order memory) {
         return orderManager.getOrder(_orderId);
+    }
+
+    function isValidToken(address _token) external view returns (bool) {
+        return tokenManager.isValidToken(_token);
+    }
+
+    function doesUserExist(address _userAddress) external view returns (bool) {
+        return userManager.doesUserExist(_userAddress);
     }
 
     /**
@@ -84,7 +96,7 @@ contract Ramp is ReentrancyGuard, Ownable, IRamp {
         userManager.registerUser(msg.sender, _userId, email);
     }
 
-    function commitOrder(bytes32 _orderId, int256 _minFiatRate) external {
+    function commitOrder(bytes32 _orderId, int256 _minFiatRate) external nonReentrant {
         if (_minFiatRate == 0) revert ZekeErrors.ZeroUint();
         if (!orderManager.doesOrderExist(_orderId)) revert ZekeErrors.OrderNotFound();
         Order memory order = orderManager.getOrder(_orderId);
@@ -102,7 +114,7 @@ contract Ramp is ReentrancyGuard, Ownable, IRamp {
         escrowManager.commitDeposit(msg.sender, order.token, order.amount);
     }
 
-    function uncommitOrder(bytes32 _orderId) external {
+    function uncommitOrder(bytes32 _orderId) external nonReentrant {
         if (!orderManager.doesOrderExist(_orderId)) revert ZekeErrors.OrderNotFound();
         Order memory order = orderManager.getOrder(_orderId);
         if (order.orderStatus == OrderStatus.CLOSED) revert ZekeErrors.OrderClosed();

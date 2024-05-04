@@ -48,6 +48,7 @@ contract EscrowManager is Ownable, ReentrancyGuard, IEscrowManager {
 
     // Remove deposit from escrowed funds
     function commitDeposit(address _offramper, address _token, uint256 _amount) external onlyOwner nonReentrant {
+        // Ok to have duplicate input validation for hackathon code
         if (_token == address(0)) revert ZekeErrors.ZeroAddress();
         if (_offramper == address(0)) revert ZekeErrors.ZeroAddress();
         if (_amount == 0) revert ZekeErrors.ZeroUint();

@@ -92,7 +92,10 @@ interface IRamp {
      * VIEW FUNCTIONS
      */
 
+    function getDeposit(address _user, address _token) external view returns (uint256);
     function getOrder(bytes32 _orderId) external view returns (Order memory);
+    function isValidToken(address _token) external view returns (bool);
+    function doesUserExist(address _userAddress) external view returns (bool);
 
     /**
      * ONRAMPER FUNCTIONS
