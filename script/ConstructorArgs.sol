@@ -60,5 +60,24 @@ contract ConstructorArgs {
         // Burn address because no CCIP router for Mantle
         ccipRouterAddress[5000] = 0x000000000000000000000000000000000000dEaD;
 
+        /**
+         * MANTLE SEPOLIA TESTNET
+         */
+
+        tokenAndFeeds[5003] = new TokenAndFeed[](2);
+            // usdc
+        tokenAndFeeds[5003][0] = TokenAndFeed({
+            token: 0x086a532583CdF6d9666c978Fa153B25816488CBb,
+            // Burn address because no Chainlink feed for Mantle
+            feed: 0x000000000000000000000000000000000000dEaD
+        });
+            // usdt
+        tokenAndFeeds[5003][1] = TokenAndFeed({
+            token: 0x9A6D17e06DB549ce12F4b351E132821F6689947a,
+            // Burn address because no Chainlink feed for Mantle
+            feed: 0x000000000000000000000000000000000000dEaD
+        });
+        // Burn address because no CCIP router for Mantle
+        ccipRouterAddress[5003] = 0x000000000000000000000000000000000000dEaD;
     }
 }
