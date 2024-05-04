@@ -2,18 +2,18 @@
 // Compatible with OpenZeppelin Contracts ^5.0.0
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Permit.sol";
+import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 
-contract USDT is ERC20, Ownable, ERC20Permit {
+contract USDT is ERC20, Ownable {
     constructor(
         address initialOwner
-    ) ERC20("USDT", "USDT") Ownable(initialOwner) ERC20Permit("USDT") {
-        _mint(msg.sender, 100000000 * 10 ** decimals());
+    ) ERC20("USDT", "USDT") Ownable(initialOwner) {
+        // Mint 1M tokens to deployer
+        _mint(msg.sender, 1e24);
     }
 
-    function mint(address to, uint256 amount) public onlyOwner {
+    function mint(address to, uint256 amount) public {
         _mint(to, amount);
     }
 }
