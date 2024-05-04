@@ -59,7 +59,7 @@ contract Ramp is ReentrancyGuard, Ownable, IRamp {
         return escrowManager.getDeposit(_user, _token);
     }
 
-    function getOrder(bytes32 _orderId) external view returns (Order memory) {
+    function getOrder(uint256 _orderId) external view returns (Order memory) {
         return orderManager.getOrder(_orderId);
     }
 
@@ -85,7 +85,7 @@ contract Ramp is ReentrancyGuard, Ownable, IRamp {
         uint256 _amount,
         int256 _minFiatRate,
         uint64 _dstChainSelector
-    ) external nonReentrant returns (bytes32) {
+    ) external nonReentrant returns (uint256) {
         //** INPUT VALIDATION **//
         if (_onramper == address(0)) revert ZekeErrors.ZeroAddress();
         if (_token == address(0)) revert ZekeErrors.ZeroAddress();
@@ -114,7 +114,7 @@ contract Ramp is ReentrancyGuard, Ownable, IRamp {
         userManager.registerUser(msg.sender, _userId, email);
     }
 
-    function commitOrder(bytes32 _orderId, int256 _minFiatRate) external nonReentrant {
+    function commitOrder(uint256 _orderId, int256 _minFiatRate) external nonReentrant {
         if (_minFiatRate == 0) revert ZekeErrors.ZeroUint();
         if (!orderManager.doesOrderExist(_orderId)) revert ZekeErrors.OrderNotFound();
         Order memory order = orderManager.getOrder(_orderId);
@@ -138,7 +138,7 @@ contract Ramp is ReentrancyGuard, Ownable, IRamp {
         escrowManager.commitDeposit(msg.sender, order.token, order.amount);
     }
 
-    function uncommitOrder(bytes32 _orderId) external nonReentrant {
+    function uncommitOrder(uint256 _orderId) external nonReentrant {
         if (!orderManager.doesOrderExist(_orderId)) revert ZekeErrors.OrderNotFound();
         Order memory order = orderManager.getOrder(_orderId);
         if (order.orderStatus == OrderStatus.CLOSED) revert ZekeErrors.OrderClosed();
@@ -150,7 +150,7 @@ contract Ramp is ReentrancyGuard, Ownable, IRamp {
     }
 
     function completeOrder(
-        bytes32 _orderId,
+        uint256 _orderId,
         bytes calldata _proof
     ) external nonReentrant {
         Order memory order = orderManager.getOrder(_orderId);
@@ -184,7 +184,7 @@ contract Ramp is ReentrancyGuard, Ownable, IRamp {
        if (userManager.compareUserId(order.onramper, _pubSignals[7])) revert ZekeErrors.IncorrectOnramper();
        if (orderManager.isNullifierConsumed(_pubSignals[8])) revert ZekeErrors.NullifierConsumed();
        // TODO - Check if uint256 cast here works, or should we have just casted the keccak256 hash to uint256 straight away
-       if (_pubSignals[9] != uint256(_orderId)) revert ZekeErrors.IncorrectOrder();
+       if (_pubSignals[9] != _orderId) revert ZekeErrors.IncorrectOrder();
        if (!tokenManager.isActualAmountSufficient(_pubSignals[4], order.minFiatRate, order.token, order.amount)) revert ZekeErrors.ActualAmountInsufficient();
 
         orderManager.completeOrder(_orderId, _pubSignals[8]);

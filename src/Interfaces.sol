@@ -24,9 +24,9 @@ struct TokenAndFeed {
 
 /* -------------------- Managers -------------------- */
 interface IOrderManager {
-    function getOrder(bytes32 orderId) external view returns (Order memory);
+    function getOrder(uint256 orderId) external view returns (Order memory);
 
-    function doesOrderExist(bytes32 orderId) external view returns (bool);
+    function doesOrderExist(uint256 orderId) external view returns (bool);
 
     function addOrder(
         address _onramper, 
@@ -34,13 +34,13 @@ interface IOrderManager {
         uint256 _amount,
         int256 _minFiatRate,
         uint64 _dstChainSelector
-    ) external returns (bytes32);
+    ) external returns (uint256);
 
-    function commitOrder(address _offramper, bytes32 _orderId) external;
+    function commitOrder(address _offramper, uint256 _orderId) external;
 
-    function uncommitOrder(bytes32 _orderId) external;
+    function uncommitOrder(uint256 _orderId) external;
 
-    function completeOrder(bytes32 _orderId, uint256 nullifier) external;
+    function completeOrder(uint256 _orderId, uint256 nullifier) external;
 
     function isNullifierConsumed(uint256 nullifier) external view returns (bool);
 }
@@ -89,7 +89,7 @@ interface IRamp {
      */
 
     function getDeposit(address _user, address _token) external view returns (uint256);
-    function getOrder(bytes32 _orderId) external view returns (Order memory);
+    function getOrder(uint256 _orderId) external view returns (Order memory);
     function isValidToken(address _token) external view returns (bool);
     function doesUserExist(address _userAddress) external view returns (bool);
     function getTokenFiatRate(address _token) external view returns (int256 fiatRate, uint256 decimals);
@@ -104,7 +104,7 @@ interface IRamp {
         uint256 _amount,
         int256 _minFiatRate,
         uint64 _dstChainSelector
-    ) external returns (bytes32);
+    ) external returns (uint256);
 
     /**
      * OFFRAMPER FUNCTIONS
@@ -112,12 +112,12 @@ interface IRamp {
 
     function registerUser(uint256 _userId, string calldata email) external;
 
-    function commitOrder(bytes32 _orderId, int256 _minFiatRate) external;
+    function commitOrder(uint256 _orderId, int256 _minFiatRate) external;
 
-    function uncommitOrder(bytes32 _orderId) external;
+    function uncommitOrder(uint256 _orderId) external;
 
     function completeOrder(
-        bytes32 _orderId,
+        uint256 _orderId,
         bytes calldata _proof
     ) external;
 

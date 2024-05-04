@@ -11,12 +11,12 @@ contract OrderManager is Ownable, ReentrancyGuard, IOrderManager {
     // Start as 'constant', can set as immutable or dynamic value later
     uint256 public constant COMMITMENT_EXPIRY_TIME = 1800;
     
-    event OrderCreated(bytes32 indexed orderId);
-    event OrderCompleted(bytes32 indexed orderId);
-    event OrderCommitted(bytes32 indexed orderId);
-    event OrderUncommitted(bytes32 indexed orderId);
+    event OrderCreated(uint256 indexed orderId);
+    event OrderCompleted(uint256 indexed orderId);
+    event OrderCommitted(uint256 indexed orderId);
+    event OrderUncommitted(uint256 indexed orderId);
 
-    mapping(bytes32 => Order) public orders;
+    mapping(uint256 => Order) public orders;
     mapping(uint256 => bool) public nullifierGraveyard;
 
     constructor(address _owner) Ownable(_owner) {}
@@ -25,12 +25,12 @@ contract OrderManager is Ownable, ReentrancyGuard, IOrderManager {
      * VIEW FUNCTIONS
      */
 
-    function getOrder(bytes32 orderId) external view returns (Order memory)
+    function getOrder(uint256 orderId) external view returns (Order memory)
     {
         return orders[orderId];
     }
 
-    function doesOrderExist(bytes32 orderId) external view returns (bool) {
+    function doesOrderExist(uint256 orderId) external view returns (bool) {
         return orders[orderId].token != address(0);
     }
 
@@ -48,12 +48,14 @@ contract OrderManager is Ownable, ReentrancyGuard, IOrderManager {
         uint256 _amount,
         int256 _minFiatRate,
         uint64 _dstChainSelector
-    ) external nonReentrant onlyOwner returns (bytes32) {
+    ) external nonReentrant onlyOwner returns (uint256) {
         // Assume input validation done in entrypoint in Ramp.sol
 
         // OrderID is hash of 'msg.sender', 'block.timestamp', '_token', '_amount'
-        bytes32 orderId = keccak256(abi.encodePacked(_onramper, block.timestamp, _token, _amount));
-        
+        bytes32 orderIdHash = keccak256(abi.encodePacked(_onramper, block.timestamp, _token, _amount));
+        // Ensure orderId is <248 bits, while being a uint256 type - restraint for ZK Proof
+        uint256 orderId = uint256(uint248(uint256(orderIdHash)));
+
         Order memory newOrder = Order({
             token: _token, 
             commitmentExpiryTime: 0,
@@ -75,7 +77,7 @@ contract OrderManager is Ownable, ReentrancyGuard, IOrderManager {
      * OFFRAMPER FUNCTIONS
      */
 
-    function commitOrder(address _offramper, bytes32 _orderId) external nonReentrant onlyOwner {
+    function commitOrder(address _offramper, uint256 _orderId) external nonReentrant onlyOwner {
         // Assume input validation done in entrypoint in Ramp.sol
         Order storage order = orders[_orderId];
         order.orderStatus = OrderStatus.COMMITTED;
@@ -84,7 +86,7 @@ contract OrderManager is Ownable, ReentrancyGuard, IOrderManager {
         emit OrderCommitted(_orderId);
     }
 
-    function uncommitOrder(bytes32 _orderId) external nonReentrant onlyOwner {
+    function uncommitOrder(uint256 _orderId) external nonReentrant onlyOwner {
         // Assume input validation done in entrypoint in Ramp.sol
         Order storage order = orders[_orderId];
         order.orderStatus = OrderStatus.OPEN;
@@ -99,7 +101,7 @@ contract OrderManager is Ownable, ReentrancyGuard, IOrderManager {
      * COMPLETE ORDER FUNCTION
      */
 
-    function completeOrder(bytes32 _orderId, uint256 _nullifier) external nonReentrant onlyOwner {
+    function completeOrder(uint256 _orderId, uint256 _nullifier) external nonReentrant onlyOwner {
         Order storage order = orders[_orderId];
         order.orderStatus = OrderStatus.CLOSED;
 
