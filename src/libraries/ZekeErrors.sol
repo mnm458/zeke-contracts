@@ -10,6 +10,9 @@ library ZekeErrors {
     error UserAlreadyRegistered();
     error UserNotRegistered();
 
+    // OrderManager.sol
+    error GeneratedOrderIdTooBig();
+
     // EscrowManager.sol
     error InsufficientEscrowedFunds();
 
