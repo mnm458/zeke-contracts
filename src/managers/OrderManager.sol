@@ -10,7 +10,8 @@ contract OrderManager is Ownable, ReentrancyGuard, IOrderManager {
     // 30 minute expiry time for commitment
     // Start as 'constant', can set as immutable or dynamic value later
     uint256 public constant COMMITMENT_EXPIRY_TIME = 1800;
-    
+    uint256 public nonce;
+
     event OrderCreated(uint256 indexed orderId);
     event OrderCompleted(uint256 indexed orderId);
     event OrderCommitted(uint256 indexed orderId);
@@ -19,7 +20,9 @@ contract OrderManager is Ownable, ReentrancyGuard, IOrderManager {
     mapping(uint256 => Order) public orders;
     mapping(uint256 => bool) public nullifierGraveyard;
 
-    constructor(address _owner) Ownable(_owner) {}
+    constructor(address _owner) Ownable(_owner) {
+        nonce = 1;
+    }
 
     /**
      * VIEW FUNCTIONS
@@ -54,7 +57,10 @@ contract OrderManager is Ownable, ReentrancyGuard, IOrderManager {
         // OrderID is hash of 'msg.sender', 'block.timestamp', '_token', '_amount'
         bytes32 orderIdHash = keccak256(abi.encodePacked(_onramper, block.timestamp, _token, _amount));
         // Ensure orderId is <248 bits, while being a uint256 type - restraint for ZK Proof
-        uint256 orderId = uint256(uint248(uint256(orderIdHash)));
+        // uint256 orderId = uint256(uint248(uint256(orderIdHash)));
+        // Hacky solution to fix orderId to simple integers
+        uint256 orderId = nonce;
+        nonce += 1;
 
         Order memory newOrder = Order({
             token: _token, 

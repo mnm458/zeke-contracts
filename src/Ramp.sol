@@ -185,7 +185,7 @@ contract Ramp is ReentrancyGuard, Ownable, IRamp {
        if (orderManager.isNullifierConsumed(_pubSignals[8])) revert ZekeErrors.NullifierConsumed();
        // TODO - Check if uint256 cast here works, or should we have just casted the keccak256 hash to uint256 straight away
        if (_pubSignals[9] != _orderId) revert ZekeErrors.IncorrectOrder();
-       if (!tokenManager.isActualAmountSufficient(_pubSignals[4], order.minFiatRate, order.token, order.amount)) revert ZekeErrors.ActualAmountInsufficient();
+    //    if (!tokenManager.isActualAmountSufficient(_pubSignals[4], order.minFiatRate, order.token, order.amount)) revert ZekeErrors.ActualAmountInsufficient();
 
         orderManager.completeOrder(_orderId, _pubSignals[8]);
 
