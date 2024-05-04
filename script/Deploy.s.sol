@@ -6,22 +6,14 @@ import { Verifier } from "../src/Verifier.sol";
 import { EmailVerifier } from "../src/verifiers/EmailVerifier.sol";
 import { Ramp } from "../src/Ramp.sol";
 import { TokenAndFeed } from "../src/Interfaces.sol";
+import { ConstructorArgs } from "./ConstructorArgs.sol";
 
-contract DeployScript is Script {
+contract DeployScript is Script, ConstructorArgs {
     function run() public {
         // DEPLOYMENT PARAMS
         address rampOwner = vm.envAddress("RAMP_OWNER");
-        TokenAndFeed[] memory tokenAndFeeds = new TokenAndFeed[](2);
-        // usdc - base sepolia
-        tokenAndFeeds[0] = TokenAndFeed({
-            token: 0x036CbD53842c5426634e7929541eC2318f3dCF7e,
-            feed: 0xd30e2101a97dcbAeBCBC04F14C3f624E67A35165
-        });
-        // usdt - base sepolia
-        tokenAndFeeds[1] = TokenAndFeed({
-            token: 0xaA8E23Fb1079EA71e0a56F48a2aA51851D8433D0,
-            feed: 0x3ec8593F930EA45ea58c968260e6e9FF53FC934f
-        });
+        uint256 chainId = vm.envUint("CHAIN_ID");
+        TokenAndFeed[] memory tokenAndFeeds = tokenAndFeeds[chainId];
 
         // DEPLOYMENT SCRIPT
         console.log("Deploying Zeke contracts");
@@ -34,7 +26,7 @@ contract DeployScript is Script {
         vm.stopBroadcast();
 
         console.log("Deployed EmailVerifier contract to ", address(emailVerifier));
-        console.log("Deployed Verifier contract to ", address(verifiers));
+        console.log("Deployed Verifier contract to ", address(verifier));
         console.log("Deployed Ramp contract to ", address(ramp));
     }
 }

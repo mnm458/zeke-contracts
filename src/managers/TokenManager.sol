@@ -26,12 +26,25 @@ contract TokenManager is Ownable, ITokenManager {
         return tokenFeed[_token] != address(0);
     }
 
+    function getTokenFiatRate(address _token) external view returns (int256 fiatRate, uint256 decimals) {
+        address _feed = tokenFeed[_token];
+        uint8 decimalsRaw = AggregatorV3Interface(_feed).decimals();
+        (
+            /* uint80 roundID */,
+            int256 chainlinkFeedRate,
+            /*uint startedAt*/,
+            /*uint timeStamp*/,
+            /*uint80 answeredInRound*/
+        ) = AggregatorV3Interface(_feed).latestRoundData();
+        return (chainlinkFeedRate, uint256(decimalsRaw));
+    }
+
     function isMinFiatRateValid(int256 _minFiatRate, address _token) external view returns (bool) {
         // https://docs.chain.link/data-feeds/using-data-feeds
         address _feed = tokenFeed[_token];
         (
             /* uint80 roundID */,
-            int chainlinkFeedRate,
+            int256 chainlinkFeedRate,
             /*uint startedAt*/,
             /*uint timeStamp*/,
             /*uint80 answeredInRound*/

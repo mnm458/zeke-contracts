@@ -43,12 +43,6 @@ interface IOrderManager {
     function completeOrder(bytes32 _orderId, uint256 nullifier) external;
 
     function isNullifierConsumed(uint256 nullifier) external view returns (bool);
-
-    function checkId(
-        bytes32 _orderId,
-        uint256 _amount,
-        uint256 _timestamp
-    ) external view returns (bool);
 }
 
 interface IEscrowManager {
@@ -65,6 +59,8 @@ interface ITokenManager {
     function isMinFiatRateValid(int256 _minFiatRate, address _token) external view returns (bool);
 
     function isActualAmountSufficient(uint256 _actualAmount, int256 _minFiatRate, address _token, uint256 _tokenAmount) external view returns (bool);
+
+    function getTokenFiatRate(address _token) external view returns (int256 fiatRate, uint256 decimals);
 
     function addValidTokens(TokenAndFeed[] memory _tokenAndFeeds) external;
 
@@ -96,6 +92,7 @@ interface IRamp {
     function getOrder(bytes32 _orderId) external view returns (Order memory);
     function isValidToken(address _token) external view returns (bool);
     function doesUserExist(address _userAddress) external view returns (bool);
+    function getTokenFiatRate(address _token) external view returns (int256 fiatRate, uint256 decimals);
 
     /**
      * ONRAMPER FUNCTIONS

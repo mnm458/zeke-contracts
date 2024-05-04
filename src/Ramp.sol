@@ -41,7 +41,7 @@ contract Ramp is ReentrancyGuard, Ownable, IRamp {
      * VIEW FUNCTIONS
      */
 
-    function getDeposit(address _user, address _token) external view returns (uint256 deposit) {
+    function getDeposit(address _user, address _token) external view returns (uint256) {
         return escrowManager.getDeposit(_user, _token);
     }
 
@@ -55,6 +55,10 @@ contract Ramp is ReentrancyGuard, Ownable, IRamp {
 
     function doesUserExist(address _userAddress) external view returns (bool) {
         return userManager.doesUserExist(_userAddress);
+    }
+
+    function getTokenFiatRate(address _token) external view returns (int256 fiatRate, uint256 decimals) {
+        return tokenManager.getTokenFiatRate(_token);
     }
 
     /**
@@ -157,20 +161,11 @@ contract Ramp is ReentrancyGuard, Ownable, IRamp {
         */
 
        if (userManager.compareUserId(order.offramper, _pubSignals[6])) revert ZekeErrors.IncorrectOfframper();
-       if (userManager.compareUserId(order.onramper, _pubSignals[7])) revert ZekeErrors.IncorrectOfframper();
+       if (userManager.compareUserId(order.onramper, _pubSignals[7])) revert ZekeErrors.IncorrectOnramper();
        if (orderManager.isNullifierConsumed(_pubSignals[8])) revert ZekeErrors.NullifierConsumed();
        // TODO - Check if uint256 cast here works, or should we have just casted the keccak256 hash to uint256 straight away
        if (_pubSignals[9] != uint256(_orderId)) revert ZekeErrors.IncorrectOrder();
        if (!tokenManager.isActualAmountSufficient(_pubSignals[4], order.minFiatRate, order.token, order.amount)) revert ZekeErrors.ActualAmountInsufficient();
-
-    //     require(
-    //         orderManager.checkId(
-    //             _pubSignals[9],
-    //             _pubSignals[4],
-    //             _pubSignals[5]
-    //         ),
-    //         "Not correct order!"
-    //     );
 
         orderManager.completeOrder(_orderId, _pubSignals[8]);
 
