@@ -9,6 +9,7 @@ import { Ramp } from '../src/Ramp.sol';
 import { Verifier } from '../src/Verifier.sol';
 import { EmailVerifier } from "../src/verifiers/EmailVerifier.sol";
 import { ITokenManager, IEscrowManager, IOrderManager, IUserManager, IVerifier, IRamp, Order, TokenAndFeed, OrderStatus } from "../src/Interfaces.sol";
+import { ZekeErrors } from '../src/libraries/ZekeErrors.sol';
 
 import { ConstructorArgs } from "../script/ConstructorArgs.sol";
 import { console } from "forge-std/Test.sol";
@@ -124,5 +125,49 @@ contract RampForkTest is TestBase {
         // Add order for USDC on Base testnet
         ramp.deposit(USDC, 1);
         ramp.commitOrder(orderId, 1e8);
+    }
+
+    function test_commitOrderByTwoDifferentUsers() public {
+        vm.prank(USER);
+        // Add order for USDC on Base testnet
+        bytes32 orderId = ramp.addOrder(address(1), USDC, 1, 1e8, 1);
+
+        vm.startPrank(USER_2);
+        deal(USDC, USER_2, 1e18);
+        IERC20(USDC).approve(address(ramp), 1e18);
+        // Add order for USDC on Base testnet
+        ramp.deposit(USDC, 1);
+        ramp.commitOrder(orderId, 1e8);
+        vm.stopPrank();
+
+        // Expire the commitment for USER_2
+        vm.warp(block.timestamp + 1801);
+
+        vm.startPrank(USER_3);
+        deal(USDC, USER_3, 1e18);
+        IERC20(USDC).approve(address(ramp), 1e18);
+        // Add order for USDC on Base testnet
+        ramp.deposit(USDC, 1);
+        ramp.commitOrder(orderId, 1e8);
+        vm.stopPrank();
+
+        // USER_2 should be able to withdraw
+        vm.prank(USER_2);
+        ramp.withdraw(USDC, 1);
+    }
+
+    function test_withdrawAfterCommitOrder_Revert() public {
+        vm.prank(USER);
+        // Add order for USDC on Base testnet
+        bytes32 orderId = ramp.addOrder(address(1), USDC, 1, 1e8, 1);
+
+        vm.startPrank(USER_2);
+        deal(USDC, USER_2, 1e18);
+        IERC20(USDC).approve(address(ramp), 1e18);
+        // Add order for USDC on Base testnet
+        ramp.deposit(USDC, 1);
+        ramp.commitOrder(orderId, 1e8);
+        vm.expectRevert(ZekeErrors.InsufficientEscrowedFunds.selector);
+        ramp.withdraw(USDC, 1);
     }
 }

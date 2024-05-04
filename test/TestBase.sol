@@ -8,6 +8,7 @@ abstract contract TestBase is Test {
     address internal constant DEPLOYER = address(bytes20(keccak256("DEPLOYER")));
     address internal constant USER = address(bytes20(keccak256("USER")));
     address internal constant USER_2 = address(bytes20(keccak256("USER_2")));
+    address internal constant USER_3 = address(bytes20(keccak256("USER_3")));
 
     modifier preSetup() {
         _;

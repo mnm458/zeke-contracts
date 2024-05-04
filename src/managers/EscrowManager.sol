@@ -29,7 +29,6 @@ contract EscrowManager is Ownable, ReentrancyGuard, IEscrowManager {
      * OFFRAMPER FUNCTIONS
      */
 
-
     function deposit(address _offramper, address _token, uint256 _amount) external nonReentrant onlyOwner {
         if (_token == address(0)) revert ZekeErrors.ZeroAddress();
         if (_offramper == address(0)) revert ZekeErrors.ZeroAddress();

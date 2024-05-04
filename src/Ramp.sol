@@ -128,6 +128,12 @@ contract Ramp is ReentrancyGuard, Ownable, IRamp {
         if (escrowManager.getDeposit(msg.sender, order.token) < order.amount) revert ZekeErrors.InsufficientEscrowedFunds();
         if (userManager.doesUserExist(msg.sender)) revert ZekeErrors.UserNotRegistered();
 
+        // Uncommit previous expired commitment by another user
+        if (order.orderStatus == OrderStatus.COMMITTED && order.offramper != msg.sender) {
+            orderManager.uncommitOrder(_orderId);
+            escrowManager.uncommitDeposit(order.offramper, order.token, order.amount);
+        }
+
         orderManager.commitOrder(msg.sender, _orderId);
         escrowManager.commitDeposit(msg.sender, order.token, order.amount);
     }
